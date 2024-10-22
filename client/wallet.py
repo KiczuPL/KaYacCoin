@@ -1,53 +1,53 @@
+from Crypto.PublicKey import RSA
+from encryption import encrypt_identity, decrypt_identity
 import json
-import base64
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from encryption import encrypt_identity
+import os
 
-def generate_key_pair() -> tuple:
-    """Generate an RSA key pair."""
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
-    public_key = private_key.public_key()
-    
-    # Use PKCS8 format for the private key
-    private_key_bytes = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,  # You can also use PKCS8 if needed
-        encryption_algorithm=serialization.NoEncryption()  # No encryption on private key bytes
-    )
-    
-    public_key_bytes = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    
-    return private_key_bytes, public_key_bytes
+def generate_key_pair():
+    key = RSA.generate(2048)
+    private_key = key.export_key(format='PEM')
+    public_key = key.publickey().export_key(format='PEM')
+    return private_key, public_key
 
-
-def create_identity(name: str) -> dict:
-    """Creates an identity with a name and generates a key pair."""
+def create_identity(name: str):
+    #Creates an identity with a name and generates a key pair.
     private_key, public_key = generate_key_pair()
-    
     identity = {
-        "name": name,
-        "public_key": base64.b64encode(public_key).decode('utf-8'),  # Encode to Base64
-        "private_key": base64.b64encode(private_key).decode('utf-8')  # Encode to Base64
+        'name': name,
+        'private_key': private_key.decode('utf-8'),  # Convert bytes to string
+        'public_key': public_key.decode('utf-8'),    # Convert bytes to string
     }
-    
     return identity
 
-def save_identity_to_file(identity: dict, password: str, filename: str) -> None:
-    """Encrypts the identity and saves it to a JSON file."""
-    encrypted_data, salt, init_vector = encrypt_identity(identity, password)
+def save_identity_to_file(identity: dict, password: str, filename: str):
+    #Save an encrypted identity to a JSON file with a unique name.
+    encrypted_data_b64, salt_b64, init_vector_b64 = encrypt_identity(identity, password)
 
-    # Create the JSON structure
-    identity_json = {
-        "encrypted_data": base64.b64encode(encrypted_data).decode('utf-8'),  # Base64 encode encrypted data
-        "salt": base64.b64encode(salt).decode('utf-8'),  # Base64 encode salt
-        "iv": base64.b64encode(init_vector).decode('utf-8')  # Base64 encode IV
+    # Save encrypted identity to JSON file
+    identity_data = {
+        'encrypted_data': encrypted_data_b64,
+        'salt': salt_b64,
+        'init_vector': init_vector_b64,
     }
 
-    # Serialize the identity JSON and save to a file
-    with open(filename, 'w') as json_file:
-        json.dump(identity_json, json_file, indent=4)
+    # Ensure the filename has a .json extension
+    if not filename.endswith('.json'):
+        filename += '.json'
+
+    with open(filename, 'w') as file:
+        json.dump(identity_data, file)
+
+def load_identity_from_file(filename: str, password: str):
+    with open(filename, 'r') as file:
+        identity_data = json.load(file)
+    return identity_data
+
+def decrypt_identity_from_file(filename: str, password: str):
+    identity_data = load_identity_from_file(filename)
+    decrypted_identity = decrypt_identity(
+        identity_data['encrypted_data'],
+        password,
+        identity_data['salt'],
+        identity_data['init_vector']
+    )
+    return decrypted_identity

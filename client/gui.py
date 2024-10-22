@@ -1,76 +1,81 @@
 import tkinter as tk
-from tkinter import messagebox
-from wallet import create_identity, save_identity_to_file
-from encryption import decrypt_identity  # Import the decryption function
-import json
-import base64
+from tkinter import messagebox, simpledialog
+import os
+from wallet import create_identity, save_identity_to_file, decrypt_identity_from_file
 
-def generate_identity():
-    """Handle the identity generation and saving process."""
-    name = entry_name.get()
-    password = entry_password.get()
+class IdentityManager:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Crypto Identity Manager")
 
-    if not name or not password:
-        messagebox.showerror("Input Error", "Please fill in both fields.")
-        return
+        # Frame for Identity Creation
+        self.frame = tk.Frame(self.master)
+        self.frame.pack(pady=10)
 
-    # Create identity
-    identity = create_identity(name)
+        self.label = tk.Label(self.frame, text="Enter Identity Name:")
+        self.label.pack()
 
-    # Save identity to file
-    try:
-        save_identity_to_file(identity, password, 'identity.json')
-        messagebox.showinfo("Success", f"Identity for '{name}' has been saved successfully!")
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred while saving: {str(e)}")
+        self.name_entry = tk.Entry(self.frame)
+        self.name_entry.pack()
 
-def load_and_decrypt_identity():
-    """Load and decrypt the saved identity from the JSON file."""
-    password = entry_password.get()
+        self.password_label = tk.Label(self.frame, text="Enter Password:")
+        self.password_label.pack()
 
-    if not password:
-        messagebox.showerror("Input Error", "Please enter your password.")
-        return
+        self.password_entry = tk.Entry(self.frame, show='*')
+        self.password_entry.pack()
 
-    try:
-        with open('identity.json', 'r') as json_file:
-            identity_json = json.load(json_file)
-        
-        # Base64 decode the encrypted data, salt, and IV
-        encrypted_data = base64.b64decode(identity_json['encrypted_data'])
-        salt = base64.b64decode(identity_json['salt'])
-        iv = base64.b64decode(identity_json['iv'])
+        self.create_button = tk.Button(self.frame, text="Create Identity", command=self.create_identity)
+        self.create_button.pack(pady=5)
 
-        # Decrypt the identity
-        decrypted_identity = decrypt_identity(encrypted_data, password, salt, iv)
-        messagebox.showinfo("Decrypted Identity", f"Identity:\n{decrypted_identity}")
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred while loading/decrypting: {str(e)}")
+        self.list_button = tk.Button(self.frame, text="Load Identities", command=self.load_identities)
+        self.list_button.pack(pady=5)
 
-# Create the main application window
-root = tk.Tk()
-root.title("Crypto Wallet Identity Generator")
+        self.identity_listbox = tk.Listbox(self.master, width=50)
+        self.identity_listbox.pack(pady=10)
 
-# Create and place labels and entry fields
-label_name = tk.Label(root, text="Identity Name:")
-label_name.pack(pady=5)
+        self.decrypt_button = tk.Button(self.master, text="Decrypt Selected Identity", command=self.decrypt_identity)
+        self.decrypt_button.pack(pady=5)
 
-entry_name = tk.Entry(root, width=30)
-entry_name.pack(pady=5)
+    def create_identity(self):
+        name = self.name_entry.get()
+        password = self.password_entry.get()
 
-label_password = tk.Label(root, text="Password:")
-label_password.pack(pady=5)
+        if not name or not password:
+            messagebox.showerror("Error", "Please provide both name and password.")
+            return
 
-entry_password = tk.Entry(root, show='*', width=30)
-entry_password.pack(pady=5)
+        identity = create_identity(name)
+        filename = f"{name}.json"
+        save_identity_to_file(identity, password, filename)
+        messagebox.showinfo("Success", f"Identity '{name}' created and saved.")
 
-# Create and place the generate button
-button_generate = tk.Button(root, text="Generate Identity", command=generate_identity)
-button_generate.pack(pady=10)
+        self.name_entry.delete(0, tk.END)
+        self.password_entry.delete(0, tk.END)
+        self.load_identities()  # Refresh the list of identities
 
-# Create and place the load button
-button_load = tk.Button(root, text="Load and Decrypt Identity", command=load_and_decrypt_identity)
-button_load.pack(pady=10)
+    def load_identities(self):
+        self.identity_listbox.delete(0, tk.END)  # Clear the listbox
+        for file in os.listdir():
+            if file.endswith(".json"):
+                self.identity_listbox.insert(tk.END, file)
 
-# Run the application
-root.mainloop()
+    def decrypt_identity(self):
+        selected = self.identity_listbox.curselection()
+        if not selected:
+            messagebox.showerror("Error", "Please select an identity to decrypt.")
+            return
+
+        filename = self.identity_listbox.get(selected[0])
+        password = simpledialog.askstring("Input", "Enter password to decrypt identity:", show='*')
+
+        if password:
+            try:
+                identity = decrypt_identity_from_file(filename, password)
+                messagebox.showinfo("Decrypted Identity", f"Name: {identity['name']}\nPublic Key: {identity['public_key']}\nPrivate Key: {identity['private_key']}")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = IdentityManager(root)
+    root.mainloop()

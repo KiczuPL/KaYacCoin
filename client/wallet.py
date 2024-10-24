@@ -1,70 +1,83 @@
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
 import os
-import json
-from encryption import encrypt_identity, decrypt_identity
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.exceptions import InvalidSignature
 
-class Wallet:
-    def __init__(self, identity_name):
-        self.identity_name = identity_name
-        self.private_key = ec.generate_private_key(ec.SECP256K1(), default_backend())  # Generowanie klucza prywatnego
-        self.public_key = self.private_key.public_key()  # Generowanie klucza publicznego na podstawie prywatnego
+# Funkcja generująca klucz prywatny i zapisująca go do pliku .pem
+def generate_key(identity_name: str, passphrase: str):
 
-    def export_private_key(self):
-        # Serializowanie klucza prywatnego do formatu PEM
-        return self.private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
-        ).decode('utf-8')
+    # Generuje klucz prywatny EC i zapisuje go do pliku .pem z nazwą opartą na nazwie tożsamości.
+    # Klucz jest szyfrowany hasłem.
+    directory = "keys"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-    def export_public_key(self):
-        # Serializowanie klucza publicznego do formatu PEM
-        return self.public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ).decode('utf-8')
+    # Ścieżka do pliku, gdzie nazwa tożsamości staje się nazwą pliku
+    file_path = os.path.join(directory, f"{identity_name}.pem")
 
-    def create_identity(self):
-        # Tworzenie tożsamości w postaci słownika
-        identity = {
-            "identity_name": self.identity_name,
-            "private_key": self.export_private_key(),
-            "public_key": self.export_public_key()
-        }
-        return identity
+    # Generowanie klucza prywatnego (krzywa eliptyczna SECP256R1)
+    private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
 
-    def save_identity(self, password, filename):
-        # Tworzenie tożsamości
-        identity = self.create_identity()
-        
-        # Szyfrowanie tożsamości
-        encrypted_data, salt, iv = encrypt_identity(identity, password)
-        
-        # Zapisanie zaszyfrowanej tożsamości do pliku
-        encrypted_identity = {
-            'encrypted_data': encrypted_data,
-            'salt': salt,
-            'iv': iv
-        }
-        
-        with open(filename, 'w') as f:
-            json.dump(encrypted_identity, f)
+    # Zapis klucza prywatnego do pliku .pem z szyfrowaniem hasłem
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.BestAvailableEncryption(passphrase.encode())
+    )
 
-    @staticmethod
-    def load_identity(password, filename):
-        # Odczyt zaszyfrowanej tożsamości z pliku
-        if not os.path.exists(filename):
-            raise FileNotFoundError("Tożsamość nie istnieje.")
-        
-        with open(filename, 'r') as f:
-            encrypted_identity = json.load(f)
+    # Zapisanie zaszyfrowanego klucza prywatnego do pliku
+    with open(file_path, "wb") as f:
+        f.write(private_pem)
 
-        encrypted_data = encrypted_identity['encrypted_data']
-        salt = encrypted_identity['salt']
-        iv = encrypted_identity['iv']
+    return private_key
 
-        # Deszyfrowanie tożsamości
-        identity = decrypt_identity(encrypted_data, password, salt, iv)
-        return identity
+
+# Funkcja odczytująca klucz prywatny z pliku i deszyfrująca go hasłem
+def load_private_key(identity_name: str, passphrase: str):
+
+    # Wczytuje i odszyfrowuje klucz prywatny z pliku .pem.
+    file_path = os.path.join("keys", f"{identity_name}.pem")
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Klucz dla tożsamości {identity_name} nie został znaleziony.")
+
+    # Wczytanie i odszyfrowanie klucza prywatnego z pliku .pem
+    with open(file_path, "rb") as f:
+        encrypted_pem = f.read()
+
+    private_key = serialization.load_pem_private_key(
+        encrypted_pem,
+        password=passphrase.encode(),
+        backend=default_backend()
+    )
+
+    return private_key
+
+
+# Funkcja generująca klucz publiczny na bieżąco z klucza prywatnego
+def get_public_key(private_key):
+    return private_key.public_key()
+
+
+# Funkcja podpisująca wiadomość za pomocą klucza prywatnego
+def sign_message(private_key, message: bytes) -> bytes:
+    signature = private_key.sign(
+        message,
+        ec.ECDSA(hashes.SHA256())
+    )
+    return signature
+
+
+# Funkcja weryfikująca podpis przy użyciu klucza publicznego
+def verify_signature(public_key, message: bytes, signature: bytes) -> bool:
+    try:
+        public_key.verify(
+            signature,
+            message,
+            ec.ECDSA(hashes.SHA256())
+        )
+        return True
+    except InvalidSignature:
+        return False

@@ -1,0 +1,39 @@
+version: '3'
+services:
+  node1:
+    build: .
+    container_name: node1
+    command: ["python", "app.py", "--mode", "INIT", "--address", "node1", "--port", "2000"]
+    ports:
+      - "2000:2000"
+      - "8080:8080"
+    networks:
+      - kayaknet
+
+  node2:
+    build: .
+    container_name: node2
+    command: ["python", "app.py", "--mode", "JOIN", "--address", "node2", "--port", "2001", "--peer", "node1:2000"]
+    ports:
+      - "2001:2001"
+      - "8081:8080"
+    depends_on:
+      - node1
+    networks:
+      - kayaknet
+
+  node3:
+    build: .
+    container_name: node3
+    command: ["python", "app.py", "--mode", "JOIN", "--address", "node3", "--port", "2002", "--peer", "node1:2000"]
+    ports:
+      - "2002:2002"
+      - "8082:8080"
+    depends_on:
+      - node1
+    networks:
+      - kayaknet
+
+networks:
+  kayaknet:
+    driver: bridge

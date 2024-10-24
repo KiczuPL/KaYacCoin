@@ -8,8 +8,8 @@ def generate_key(path: str):
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
-        # encryption_algorithm=serialization.NoEncryption()
-        encryption_algorithm=serialization.BestAvailableEncryption(b"passphrase")
+        encryption_algorithm=serialization.NoEncryption()
+        # encryption_algorithm=serialization.BestAvailableEncryption(b"passphrase")
     )
 
     with open(path, "wb") as f:

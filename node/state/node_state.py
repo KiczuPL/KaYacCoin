@@ -1,55 +1,40 @@
-import asyncio
-import websockets
 import logging
-import json
 
 
 class NodeState:
 
     def __init__(self):
         self.mode = "INIT"
+        self.node_uuid = None
         self.start_peers = []
-        self.peers = []
-        self.peers_websocket_connections = []
+        self.connected_peers = []
         self.blockchain = []
         self.private_key = None
-        self.public_key = None
         self.node_id = None
         self.node_address = None
         self.node_port = None
+        self.mempool = []
+        self.verify_ssl_cert = False
 
-    def broadcast(self, message):
-        print(f"broadcasting message: {message}")
-        for peer in self.peers_websocket_connections:
-            asyncio.create_task(peer.send(message))
+    def add_peer(self, peer):
+        if peer in self.connected_peers:
+            logging.info(f"Peer {peer} already connected")
+            return
+        self.connected_peers.append(peer)
+        logging.info(f"Added peer: {peer}, connected peers: {len(self.connected_peers)}")
 
-    async def message_handler(self, websocket):
-        self.peers_websocket_connections.append(websocket)
-        logging.info(
-            f"new peer connected started: {websocket.remote_address}, current peers: {len(nodeState.peers_websocket_connections)}")
-        try:
-            async for message in websocket:
-                data = json.loads(message)
-                logging.info(f"received message: {data}")
-                # await websocket.send(message)
-        except websockets.ConnectionClosedError:
-            logging.error(f"peer disconnected: {websocket.remote_address}")
+    def remove_peer(self, peer):
+        if peer not in self.connected_peers:
+            logging.info(f"Peer {peer} not connected")
+            return
+        self.connected_peers.remove(peer)
+        logging.info(f"Removed peer: {peer}, connected peers: {len(self.connected_peers)}")
 
-        nodeState.peers_websocket_connections.remove(websocket)
-        logging.info(
-            f"peer disconnected: {websocket.remote_address}, current peers: {len(nodeState.peers_websocket_connections)}")
+    def get_callback_address(self):
+        return f"{self.node_address}:{self.node_port}"
 
-    async def start_socket(self):
-        async with websockets.serve(self.message_handler, self.node_address, self.node_port):
-            await asyncio.Future()
-
-    async def connect_to_start_peers(self):
-        for peer in self.start_peers:
-            logging.info(f"connecting to peer: {peer}")
-            async with websockets.connect(f"ws://{peer}") as websocket:
-                self.peers_websocket_connections.append(websocket)
-                logging.info(f"connected to peer: {peer}")
-                await asyncio.Future()
+    def print_mempool(self):
+        logging.info(f"MemPool: {self.mempool}")
 
 
 nodeState = NodeState()

@@ -3,7 +3,7 @@ services:
   node1:
     build: .
     container_name: node1
-    command: ["python", "app.py", "--mode", "INIT", "--address", "node1", "--port", "2000"]
+    command: [ "python", "app.py", "--mode", "INIT", "--address", "node1", "--port", "2000" ]
     ports:
       - "2000:2000"
       - "8080:8080"
@@ -13,9 +13,9 @@ services:
   node2:
     build: .
     container_name: node2
-    command: ["python", "app.py", "--mode", "JOIN", "--address", "node2", "--port", "2001", "--peer", "node1:2000"]
+    command: ["./wait-for-it.sh", "node1:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node2", "--port", "2000", "--peer", "node1:2000" ]
     ports:
-      - "2001:2001"
+      - "2001:2000"
       - "8081:8080"
     depends_on:
       - node1
@@ -25,9 +25,9 @@ services:
   node3:
     build: .
     container_name: node3
-    command: ["python", "app.py", "--mode", "JOIN", "--address", "node3", "--port", "2002", "--peer", "node1:2000"]
+    command: ["./wait-for-it.sh", "node1:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node3", "--port", "2000", "--peer", "node1:2000" ]
     ports:
-      - "2002:2002"
+      - "2002:2000"
       - "8082:8080"
     depends_on:
       - node1

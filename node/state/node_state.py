@@ -5,7 +5,6 @@ class NodeState:
 
     def __init__(self):
         self.mode = "INIT"
-        self.node_uuid = None
         self.start_peers = []
         self.connected_peers = []
         self.blockchain = []

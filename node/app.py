@@ -1,22 +1,29 @@
 import argparse
-import asyncio
-import threading
 
 from argparse import Namespace
+from time import sleep
 
+from cryptography.hazmat.primitives import serialization
+
+from client.broadcast import init_handshake
 from keys import load_key
 
-from api.api import *
+from api.node_comm import *
+from api.client_comm import *
+
+from state.node_state import nodeState
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def init_state(args: Namespace):
-    nodeState.public_key = load_key("keys/private_key.pem")
+    nodeState.private_key = load_key("keys/private_key.pem")
     nodeState.mode = args.mode
     nodeState.node_address = args.address
     nodeState.node_port = args.port
     nodeState.start_peers = [args.peer] if args.peer else []
+    nodeState.node_id = nodeState.private_key.public_key().public_bytes(encoding=serialization.Encoding.DER,
+                                                                        format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
 
 
 if __name__ == "__main__":
@@ -29,19 +36,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     init_state(args)
 
-    if args.mode == "JOIN":
-        logging.info("Joining network")
-        asyncio.run(nodeState.connect_to_start_peers())
-
-
-    def run_flask_app():
-        flask_app.run(host=args.address, port=8080)
-
-
-    flask_thread = threading.Thread(target=run_flask_app)
-    flask_thread.start()
-
     logging.info(f"Starting node on address {args.address}:{args.port} with mode: {args.mode}")
 
-    asyncio.run(nodeState.start_socket())
-    # start flask app from api.py as async
+    if args.mode == "JOIN":
+        logging.info("Joining network")
+        init_handshake(args.peer)
+
+    flask_app.run(host=args.address, port=args.port, ssl_context='adhoc')

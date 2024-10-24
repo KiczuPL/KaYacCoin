@@ -10,7 +10,7 @@ from state.node_state import nodeState
 @flask_app.route('/broadcastTransaction', methods=['POST'])
 def broadcast_transaction():
     logging.info(f"Broadcasting transaction : {request.get_json()}")
-    transaction : CreateTransactionRequest = request.get_json()
+    transaction = request.get_json()
     broadcast_transaction_into_network(transaction)
     return jsonify(success=True)
 

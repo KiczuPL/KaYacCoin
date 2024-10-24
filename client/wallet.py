@@ -1,53 +1,70 @@
-from Crypto.PublicKey import RSA
-from encryption import encrypt_identity, decrypt_identity
-import json
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 import os
+import json
+from encryption import encrypt_identity, decrypt_identity
 
-def generate_key_pair():
-    key = RSA.generate(2048)
-    private_key = key.export_key(format='PEM')
-    public_key = key.publickey().export_key(format='PEM')
-    return private_key, public_key
+class Wallet:
+    def __init__(self, identity_name):
+        self.identity_name = identity_name
+        self.private_key = ec.generate_private_key(ec.SECP256K1(), default_backend())  # Generowanie klucza prywatnego
+        self.public_key = self.private_key.public_key()  # Generowanie klucza publicznego na podstawie prywatnego
 
-def create_identity(name: str):
-    #Creates an identity with a name and generates a key pair.
-    private_key, public_key = generate_key_pair()
-    identity = {
-        'name': name,
-        'private_key': private_key.decode('utf-8'),  # Convert bytes to string
-        'public_key': public_key.decode('utf-8'),    # Convert bytes to string
-    }
-    return identity
+    def export_private_key(self):
+        # Serializowanie klucza prywatnego do formatu PEM
+        return self.private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        ).decode('utf-8')
 
-def save_identity_to_file(identity: dict, password: str, filename: str):
-    #Save an encrypted identity to a JSON file with a unique name.
-    encrypted_data_b64, salt_b64, init_vector_b64 = encrypt_identity(identity, password)
+    def export_public_key(self):
+        # Serializowanie klucza publicznego do formatu PEM
+        return self.public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode('utf-8')
 
-    # Save encrypted identity to JSON file
-    identity_data = {
-        'encrypted_data': encrypted_data_b64,
-        'salt': salt_b64,
-        'init_vector': init_vector_b64,
-    }
+    def create_identity(self):
+        # Tworzenie tożsamości w postaci słownika
+        identity = {
+            "identity_name": self.identity_name,
+            "private_key": self.export_private_key(),
+            "public_key": self.export_public_key()
+        }
+        return identity
 
-    # Ensure the filename has a .json extension
-    if not filename.endswith('.json'):
-        filename += '.json'
+    def save_identity(self, password, filename):
+        # Tworzenie tożsamości
+        identity = self.create_identity()
+        
+        # Szyfrowanie tożsamości
+        encrypted_data, salt, iv = encrypt_identity(identity, password)
+        
+        # Zapisanie zaszyfrowanej tożsamości do pliku
+        encrypted_identity = {
+            'encrypted_data': encrypted_data,
+            'salt': salt,
+            'iv': iv
+        }
+        
+        with open(filename, 'w') as f:
+            json.dump(encrypted_identity, f)
 
-    with open(filename, 'w') as file:
-        json.dump(identity_data, file)
+    @staticmethod
+    def load_identity(password, filename):
+        # Odczyt zaszyfrowanej tożsamości z pliku
+        if not os.path.exists(filename):
+            raise FileNotFoundError("Tożsamość nie istnieje.")
+        
+        with open(filename, 'r') as f:
+            encrypted_identity = json.load(f)
 
-def load_identity_from_file(filename: str, password: str):
-    with open(filename, 'r') as file:
-        identity_data = json.load(file)
-    return identity_data
+        encrypted_data = encrypted_identity['encrypted_data']
+        salt = encrypted_identity['salt']
+        iv = encrypted_identity['iv']
 
-def decrypt_identity_from_file(filename: str, password: str):
-    identity_data = load_identity_from_file(filename)
-    decrypted_identity = decrypt_identity(
-        identity_data['encrypted_data'],
-        password,
-        identity_data['salt'],
-        identity_data['init_vector']
-    )
-    return decrypted_identity
+        # Deszyfrowanie tożsamości
+        identity = decrypt_identity(encrypted_data, password, salt, iv)
+        return identity

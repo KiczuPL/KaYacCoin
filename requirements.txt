@@ -1,0 +1,7 @@
+cffi==1.17.1
+cryptography==43.0.3
+pycparser==2.22
+pycryptodome==3.21.0
+PyQt5==5.15.11
+PyQt5-Qt5==5.15.2
+PyQt5_sip==12.15.0

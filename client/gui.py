@@ -135,7 +135,7 @@ class CryptoWalletApp:
             return
 
         try:
-            response = requests.post(f"https://{node_address}/isAlive", verify=False)
+            response = requests.get(f"https://{node_address}/isAlive", verify=False)
             response.raise_for_status()
             messagebox.showinfo("Sukces", f"Połączenie z nodem {node_address} udane!")
         except Exception as e:

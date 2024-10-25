@@ -18,11 +18,10 @@ class CryptoWalletApp:
         self.root.grid_columnconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
 
-        # Ramka centralna, która wyśrodkuje zawartość
         frame_center = tk.Frame(self.root)
         frame_center.grid(row=0, column=0, padx=10, pady=10, sticky="nsew", columnspan=2)
 
-        # Ustawienie elastyczności ramki centralnej
+        # Ustawienie ramki
         frame_center.grid_rowconfigure(0, weight=1)
         frame_center.grid_columnconfigure(0, weight=1)
 
@@ -36,21 +35,21 @@ class CryptoWalletApp:
         self.identity_listbox.pack(pady=5)
         self.load_identities()
 
-        # Ramka dla sekcji operacji (prawa strona)
+        # Ramka dla sekcji operacji
         frame_right = tk.Frame(frame_center)
         frame_right.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
-        # Etykieta i pole do wpisania nazwy tożsamości
+        # Pole do wpisania nazwy tożsamości
         tk.Label(frame_right, text="Nazwa tożsamości:").grid(row=0, column=0, sticky="w", padx=5)
         self.identity_name_entry = tk.Entry(frame_right, width=25)
         self.identity_name_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        # Etykieta i pole do wpisania hasła
+        # Pole do wpisania hasła
         tk.Label(frame_right, text="Hasło:").grid(row=1, column=0, sticky="w", padx=5)
         self.passphrase_entry = tk.Entry(frame_right, show="*", width=25)
         self.passphrase_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
 
-        # Guziki operacyjne, wyśrodkowane
+        # Guziki
         self.generate_button = tk.Button(frame_right, text="Generuj tożsamość", command=self.generate_identity)
         self.generate_button.grid(row=2, column=1, padx=5, pady=5)
 
@@ -60,7 +59,7 @@ class CryptoWalletApp:
         self.public_key_button = tk.Button(frame_right, text="Pokaż klucz publiczny", command=self.show_public_key)
         self.public_key_button.grid(row=4, column=1, padx=5, pady=5)
 
-        # Sekcja testowania połączenia z nodem (na dole)
+        # Sekcja testowania połączenia
         frame_bottom = tk.Frame(self.root)
         frame_bottom.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
 
@@ -92,7 +91,7 @@ class CryptoWalletApp:
         try:
             generate_key(identity_name, passphrase)
             messagebox.showinfo("Sukces", f"Klucz dla {identity_name} został wygenerowany!")
-            self.load_identities()  # Odśwież listę tożsamości
+            self.load_identities()
         except Exception as e:
             messagebox.showerror("Błąd", str(e))
 
@@ -141,7 +140,6 @@ class CryptoWalletApp:
         except Exception as e:
             messagebox.showerror("Błąd", f"Nie udało się połączyć z nodem: {str(e)}")
 
-# Uruchomienie aplikacji
 if __name__ == "__main__":
     root = tk.Tk()
     app = CryptoWalletApp(root)

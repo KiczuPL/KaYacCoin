@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 from datetime import datetime
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -17,9 +18,9 @@ def create_message(identity_name: str, message_text: str) -> dict:
         raise ValueError("Wiadomość nie może być pusta.")
     
     message = {
-        "identity": identity_name,
+        #"identity": identity_name,
         "message": message_text,
-        "timestamp": datetime.utcnow().isoformat()  # Czas w formacie ISO 8601
+        "timestamp": time.time()
     }
     return message
 

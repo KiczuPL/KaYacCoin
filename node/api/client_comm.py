@@ -27,4 +27,4 @@ def broadcast():
 
 @flask_app.route('/mempool', methods=['GET'])
 def get_mempool():
-    return jsonify([transaction.to_dict() for transaction in nodeState.mempool])
+    return jsonify([transaction.model_dump() for transaction in nodeState.mempool])

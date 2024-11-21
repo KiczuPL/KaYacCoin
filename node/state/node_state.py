@@ -11,7 +11,7 @@ class NodeState:
         self.mode = "INIT"
         self.start_peers = []
         self.connected_peers = []
-        self.blockchain = List[Block]
+        self.blockchain: List[Block] = []
         self.private_key = None
         self.node_id = None
         self.node_address = None
@@ -38,6 +38,37 @@ class NodeState:
 
     def print_mempool(self):
         logging.info(f"MemPool: {self.mempool}")
+
+    def append_block(self, block: Block):
+        if len(self.blockchain) == 0:
+            if not block.is_genesis_block():
+                raise ValueError("Block is not genesis block")
+            self.blockchain.append(block)
+
+        if block.data.index != len(self.blockchain):
+            raise ValueError("Block is not next in sequence")
+
+        if not block.data.previous_hash == self.blockchain[-1].hash:
+            raise ValueError("Invalid block, hash does not match previous block")
+
+        if not block.is_valid():
+            raise ValueError("Invalid block")
+
+        self.blockchain.append(block)
+        self.defrag_mempool()
+        logging.info(f"Block added to blockchain: {block}")
+
+    def defrag_mempool(self):
+        logging.info("Defragging mempool")
+        self.mempool = [t for t in self.mempool if t not in self.blockchain[-1].data.transactions]
+        logging.info("Mempool defragged")
+
+    def create_genesis_block(self):
+        logging.info("Creating genesis block")
+        self.blockchain.append(Block.genesis_block())
+
+    def load_blockchain(self, blockchain: dict):
+        self.blockchain = [Block(**block) for block in blockchain]
 
 
 nodeState = NodeState()

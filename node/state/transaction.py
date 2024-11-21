@@ -3,8 +3,7 @@ from pydantic import BaseModel
 
 class Transaction(BaseModel):
     message: str
+    timestamp: float
 
-    def to_dict(self):
-        return {
-            "message": self.message
-        }
+    def __eq__(self, other):
+        return self.message == other.message and self.timestamp == other.timestamp

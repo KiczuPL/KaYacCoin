@@ -1,4 +1,8 @@
 import logging
+from typing import List
+
+from state.block import Block
+from state.transaction import Transaction
 
 
 class NodeState:
@@ -7,12 +11,12 @@ class NodeState:
         self.mode = "INIT"
         self.start_peers = []
         self.connected_peers = []
-        self.blockchain = []
+        self.blockchain = List[Block]
         self.private_key = None
         self.node_id = None
         self.node_address = None
         self.node_port = None
-        self.mempool = []
+        self.mempool: List[Transaction] = []
         self.verify_ssl_cert = False
 
     def add_peer(self, peer):

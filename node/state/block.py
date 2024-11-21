@@ -1,9 +1,11 @@
-class Block:
+from pydantic import BaseModel
+from state.block_data import BlockData
 
-    def __init__(self, index, previous_hash, timestamp, data, hash):
-        self.index = index
-        self.previous_hash = previous_hash
-        self.timestamp = timestamp
-        self.data = data
-        self.hash = hash
-        self.nonce = 0
+
+class Block(BaseModel):
+    hash: str
+    data: BlockData
+
+    def calculate_hash(self) -> str:
+        self.hash = self.data.calculate_hash()
+        return self.hash

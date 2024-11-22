@@ -1,7 +1,7 @@
 import time
-from datetime import datetime
 
 from pydantic import BaseModel
+
 from state.block_data import BlockData
 from state.transaction import Transaction
 
@@ -24,4 +24,5 @@ class Block(BaseModel):
     def genesis_block():
         genesis_data = BlockData(index=0, previous_hash="0", timestamp=time.time(), nonce=0,
                                  transactions=[Transaction(message="And so it began", timestamp=time.time())])
+
         return Block(hash=genesis_data.calculate_hash(), data=genesis_data)

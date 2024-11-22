@@ -12,7 +12,7 @@ from api.node_comm import *
 from api.client_comm import *
 
 from state.node_state import nodeState
-from utils.mining import miner_scheduled_job
+from utils.miner_job import miner_scheduled_job
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

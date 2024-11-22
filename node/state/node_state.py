@@ -3,6 +3,7 @@ from typing import List
 
 from state.block import Block
 from state.transaction import Transaction
+from utils.mining import mine_block
 
 
 class NodeState:
@@ -17,6 +18,7 @@ class NodeState:
         self.node_address = None
         self.node_port = None
         self.mempool: List[Transaction] = []
+        self.difficulty = 3
         self.verify_ssl_cert = False
 
     def add_peer(self, peer):
@@ -45,6 +47,9 @@ class NodeState:
                 raise ValueError("Block is not genesis block")
             self.blockchain.append(block)
 
+        if len(self.blockchain) > block.data.index:
+            raise ValueError("Block already in blockchain")
+
         if block.data.index != len(self.blockchain):
             raise ValueError("Block is not next in sequence")
 
@@ -65,7 +70,8 @@ class NodeState:
 
     def create_genesis_block(self):
         logging.info("Creating genesis block")
-        self.blockchain.append(Block.genesis_block())
+        genesis = mine_block(Block.genesis_block(), self.difficulty)
+        self.blockchain.append(genesis)
 
     def load_blockchain(self, blockchain: dict):
         self.blockchain = [Block(**block) for block in blockchain]

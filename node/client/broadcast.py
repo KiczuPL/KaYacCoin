@@ -34,24 +34,25 @@ def broadcast_block_into_network(block: Block, callback_address, address_to_skip
     send_to_all_peers(request_to_broadcast, address_to_skip, endpoint="blockBroadcast", content=block)
 
 
-def init_handshake(peer):
-    logging.info(f"Initiating handshake with peer: {peer}")
-    logging.info(f"https://{peer}/handshake")
-    try:
-        response = requests.post(f"https://{peer}/handshake",
-                                 json={"callback": f"{nodeState.node_address}:{nodeState.node_port}"},
-                                 verify=nodeState.verify_ssl_cert)
-        response.raise_for_status()
-    except requests.exceptions.Timeout:
-        logging.warn("Request timed out")
-    except requests.exceptions.ConnectionError:
-        logging.warn("Failed to connect to the server")
-    except requests.exceptions.HTTPError as http_err:
-        logging.warn(f"HTTP error occurred: {http_err}")
-    except requests.exceptions.RequestException as err:
-        logging.warn(f"An error occurred: {err}")
-    nodeState.add_peer(peer)
-    logging.info(f"Handshake complete with peer: {peer}")
+def init_handshake(peers):
+    for peer in peers:
+        logging.info(f"Initiating handshake with peer: {peer}")
+        logging.info(f"https://{peer}/handshake")
+        try:
+            response = requests.post(f"https://{peer}/handshake",
+                                     json={"callback": f"{nodeState.node_address}:{nodeState.node_port}"},
+                                     verify=nodeState.verify_ssl_cert)
+            response.raise_for_status()
+        except requests.exceptions.Timeout:
+            logging.warn("Request timed out")
+        except requests.exceptions.ConnectionError:
+            logging.warn("Failed to connect to the server")
+        except requests.exceptions.HTTPError as http_err:
+            logging.warn(f"HTTP error occurred: {http_err}")
+        except requests.exceptions.RequestException as err:
+            logging.warn(f"An error occurred: {err}")
+        nodeState.add_peer(peer)
+        logging.info(f"Handshake complete with peer: {peer}")
 
 
 def send_to_all_peers(request_body, address_to_skip, endpoint, content=""):

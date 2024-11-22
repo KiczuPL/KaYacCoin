@@ -32,11 +32,21 @@ def start_scheduler():
     scheduler.add_job(
         miner_scheduled_job,
         'interval',
-        seconds=10,  # Czas po zakończeniu zadania do uruchomienia następnego
-        max_instances=1,  # Zapewnia, że zadanie nie będzie uruchamiane równocześnie
+        seconds=10,
+        max_instances=1,
         id='data_task'
     )
     scheduler.start()
+
+
+def load_peers(peer_filename):
+    loaded_peers = []
+    with open(peer_filename, 'r', encoding='utf-8') as file:
+        for line in file.readlines():
+            line = line.strip()
+            if line:
+                loaded_peers.append(line)
+    return loaded_peers
 
 
 if __name__ == "__main__":
@@ -53,8 +63,9 @@ if __name__ == "__main__":
 
     if args.mode == "JOIN":
         logging.info("Joining network")
-        init_handshake(args.peer)
-        blockchain = get_blockchain(args.peer)
+        peers = load_peers(args.peer)
+        init_handshake(peers)
+        blockchain = get_blockchain(peers[0])
         nodeState.load_blockchain(blockchain)
 
     else:

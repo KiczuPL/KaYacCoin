@@ -13,7 +13,7 @@ services:
   node2:
     build: .
     container_name: node2
-    command: [ "./wait-for-it.sh", "node1:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node2", "--port", "2000", "--peer", "node1:2000" ]
+    command: [ "./wait-for-it.sh", "node1:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node2", "--port", "2000", "--peer", "./resources/peers_node_2.txt" ]
     ports:
       - "2001:2000"
       - "8081:8080"
@@ -25,7 +25,7 @@ services:
   node3:
     build: .
     container_name: node3
-    command: [ "./wait-for-it.sh", "node1:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node3", "--port", "2000", "--peer", "node1:2000" ]
+    command: [ "./wait-for-it.sh", "node1:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node3", "--port", "2000", "--peer", "./resources/peers_node_3.txt" ]
     ports:
       - "2002:2000"
       - "8082:8080"
@@ -37,7 +37,7 @@ services:
   node4:
     build: .
     container_name: node4
-    command: [ "./wait-for-it.sh", "node3:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node4", "--port", "2000", "--peer", "node3:2000" ]
+    command: [ "./wait-for-it.sh", "node3:2000", "--", "python", "app.py", "--mode", "JOIN", "--address", "node4", "--port", "2000", "--peer", "./resources/peers_node_4.txt" ]
     ports:
       - "2003:2000"
       - "8083:8080"

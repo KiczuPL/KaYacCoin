@@ -41,7 +41,7 @@ def broadcast_block():
         nodeState.append_block(block)
     except ValueError as e:
         logging.error(f"Error appending block: {e}")
-        return "Block is invalid", 400
+        return "Block is invalid"
 
     broadcast_block_into_network(block, nodeState.get_callback_address(), address_to_skip=t["callback"])
 

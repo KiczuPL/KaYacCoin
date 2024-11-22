@@ -25,9 +25,3 @@ class Block(BaseModel):
         genesis_data = BlockData(index=0, previous_hash="0", timestamp=time.time(), nonce=0,
                                  transactions=[Transaction(message="And so it began", timestamp=time.time())])
         return Block(hash=genesis_data.calculate_hash(), data=genesis_data)
-
-    def to_dict(self):
-        return {
-            "hash": self.hash,
-            "data": self.data.to_dict()
-        }

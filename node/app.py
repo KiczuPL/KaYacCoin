@@ -4,10 +4,10 @@ from argparse import Namespace
 from apscheduler.schedulers.background import BackgroundScheduler
 from cryptography.hazmat.primitives import serialization
 
-from api.client_comm import *
 from client.broadcast import init_handshake, get_blockchain
 from keys import load_key
 
+from api.client_comm import *
 from api.node_comm import *
 from api.client_comm import *
 
@@ -37,6 +37,7 @@ def start_scheduler():
         id='data_task'
     )
     scheduler.start()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='KaYakCoin Node')

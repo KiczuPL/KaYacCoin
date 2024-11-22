@@ -168,7 +168,7 @@ class CryptoWalletApp:
             return
 
         try:
-            response = requests.post(f"https://{node_address}/isAlive", verify=False)
+            response = requests.get(f"https://{node_address}/isAlive", verify=False)
             response.raise_for_status()
             messagebox.showinfo("Sukces", f"Połączenie z nodem {node_address} udane!")
         except Exception as e:
@@ -203,7 +203,10 @@ class CryptoWalletApp:
         """Przetwarza wprowadzoną wiadomość i wyświetla ją jako JSON."""
         selected_identity = self.identity_listbox.get(tk.ACTIVE)
         message_text = self.message_entry.get()
-
+        node_address = self.node_address_entry.get()
+        if not node_address:
+            messagebox.showerror("Błąd", "Adres noda nie może być pusty!")
+            return
         if not selected_identity:
             messagebox.showerror("Błąd", "Proszę wybrać tożsamość.")
             return
@@ -217,10 +220,11 @@ class CryptoWalletApp:
             message = create_message(selected_identity, message_text)
 
             # Serializacja do JSON
-            json_message = serialize_message_to_json(message)
+            requests.post(f"https://{node_address}/broadcast", json=message, verify=False)
 
+            json_message = serialize_message_to_json(message)
             # Wyświetlenie wiadomości w formacie JSON
-            messagebox.showinfo("Wiadomość JSON", json_message)
+            messagebox.showinfo("Wysłana wiadomość JSON", json_message)
         except Exception as e:
             messagebox.showerror("Błąd", f"Nie udało się przetworzyć wiadomości: {str(e)}")
 

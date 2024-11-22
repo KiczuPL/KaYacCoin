@@ -1,4 +1,3 @@
-import datetime
 import logging
 import time
 
@@ -14,7 +13,7 @@ def build_block(index: int, previous_hash: str, timestamp, nonce: int, transacti
 
 
 def mine_block(block: Block) -> Block:
-    while not block.hash.startswith('0'):
+    while not block.hash.startswith('000'):
         block.data.nonce += 1
         block.hash = block.calculate_hash()
     logging.info(f"Block mined: {block.hash}, nonce: {block.data.nonce}")

@@ -1,17 +1,18 @@
 import argparse
-
 from argparse import Namespace
-from time import sleep
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from cryptography.hazmat.primitives import serialization
 
-from client.broadcast import init_handshake
+from client.broadcast import init_handshake, get_blockchain
 from keys import load_key
 
+from api.client_comm import *
 from api.node_comm import *
 from api.client_comm import *
 
 from state.node_state import nodeState
+from utils.mining import miner_scheduled_job
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -24,6 +25,18 @@ def init_state(args: Namespace):
     nodeState.start_peers = [args.peer] if args.peer else []
     nodeState.node_id = nodeState.private_key.public_key().public_bytes(encoding=serialization.Encoding.DER,
                                                                         format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
+
+
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        miner_scheduled_job,
+        'interval',
+        seconds=10,  # Czas po zakończeniu zadania do uruchomienia następnego
+        max_instances=1,  # Zapewnia, że zadanie nie będzie uruchamiane równocześnie
+        id='data_task'
+    )
+    scheduler.start()
 
 
 if __name__ == "__main__":
@@ -41,5 +54,14 @@ if __name__ == "__main__":
     if args.mode == "JOIN":
         logging.info("Joining network")
         init_handshake(args.peer)
+        blockchain = get_blockchain(args.peer)
+        nodeState.load_blockchain(blockchain)
 
-    flask_app.run(host=args.address, port=args.port, ssl_context='adhoc')
+    else:
+        logging.info("Initializing network, creating genesis block")
+        nodeState.create_genesis_block()
+
+        logging.info("Starting miner")
+        start_scheduler()
+
+    flask_app.run(host=args.address, port=args.port, ssl_context='adhoc', use_reloader=False)

@@ -70,7 +70,7 @@ class NodeState:
 
     def create_genesis_block(self):
         logging.info("Creating genesis block")
-        genesis = mine_block(Block.genesis_block(), self.difficulty)
+        genesis = mine_block(Block.genesis_block())
         self.blockchain.append(genesis)
 
     def load_blockchain(self, blockchain: dict):

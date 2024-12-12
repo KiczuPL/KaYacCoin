@@ -8,6 +8,7 @@ from state.transaction import Transaction
 class BlockData(BaseModel):
     index: int
     previous_hash: str
+    difficulty: int
     timestamp: float
     nonce: int
     transactions: List[Transaction]

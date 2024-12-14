@@ -8,6 +8,15 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from key_generator import get_key
 from state.transaction_data import TxIn
 
+if []:
+    print("sranie")
+
+
+
+
+
+
+
 tx1 = TxIn(txOutId="1", txOutIndex=1)
 tx2 = TxIn(txOutId="1", txOutIndex=2)
 

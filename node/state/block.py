@@ -14,8 +14,7 @@ class Block(BaseModel):
         self.hash = self.data.calculate_hash()
         return self.hash
 
-    def is_valid(self) -> bool:
-        # todo: tutaj będzie do dodania walidacja transakcji które są zawarte w bloku(albo w BlockData???)
+    def is_hash_valid(self) -> bool:
         return self.hash == self.calculate_hash() and self.hash.startswith("0" * self.data.difficulty)
 
     def is_genesis_block(self) -> bool:

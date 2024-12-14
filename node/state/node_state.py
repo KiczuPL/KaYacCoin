@@ -3,6 +3,7 @@ from typing import List
 
 from state.block import Block
 from state.transaction import Transaction
+from state.transaction_data import TxOut
 from utils.mining import mine_block
 
 
@@ -21,6 +22,12 @@ class NodeState:
         self.unspent_transaction_outputs = {}
         self.difficulty = 3
         self.verify_ssl_cert = False
+
+    def get_unspent_transaction_output(self, txOutId: str, txOutIndex: int):
+        return self.unspent_transaction_outputs.get(f"{txOutId}:{txOutIndex}")
+
+    def add_unspent_transaction_output(self, txOutId: str, txOutIndex: int, txOut: TxOut):
+        self.unspent_transaction_outputs[f"{txOutId}:{txOutIndex}"] = txOut
 
     def add_transaction_to_mempool(self, transaction: Transaction):
         if transaction not in self.mempool:

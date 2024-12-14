@@ -1,16 +1,18 @@
 from typing import List
 
+from pydantic import BaseModel
 
-class TxIn:
+
+class TxIn(BaseModel):
     txOutId: str
     txOutIndex: int
 
 
-class TxOut:
+class TxOut(BaseModel):
     address: str
     amount: int
 
 
-class TransactionData:
+class TransactionData(BaseModel):
     txIns: List[TxIn]
     txOuts: List[TxOut]

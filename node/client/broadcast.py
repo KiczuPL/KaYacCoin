@@ -9,14 +9,7 @@ from state.transaction import Transaction
 
 def broadcast_transaction_into_network(transaction_request, address_to_skip=None):
     transaction: Transaction = transaction_request["transaction"]
-
-    if transaction not in nodeState.mempool:
-        nodeState.mempool.append(transaction)
-        nodeState.print_mempool()
-    else:
-        logging.info("Transaction already in mempool")
-        return
-
+    
     request_to_broadcast = {
         "transaction": transaction.model_dump(),
         "callback": nodeState.get_callback_address()

@@ -17,9 +17,10 @@ def is_alive():
 def broadcast():
     logging.info(f"Received broadcast message")
     t = request.get_json()
-
+    tr = Transaction(**t)
+    nodeState.add_transaction_to_mempool(tr)
     broadcast_transaction_into_network({
-        "transaction": Transaction(**t),
+        "transaction": tr,
         "callback": nodeState.get_callback_address()
     })
     return "Message broadcasted"

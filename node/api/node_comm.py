@@ -14,6 +14,7 @@ def get_block():
     params = request.args
     return jsonify(nodeState.blockchain[int(params["index"])].model_dump())
 
+
 @flask_app.route('/allBlocks', methods=['GET'])
 def get_all_blocks():
     return jsonify([block.model_dump() for block in nodeState.blockchain])
@@ -23,9 +24,10 @@ def get_all_blocks():
 def broadcast_transaction():
     logging.info(f"Broadcasting transaction : {request.get_json()}")
     t = request.get_json()
-
+    tr = Transaction(**t["transaction"])
+    nodeState.add_transaction_to_mempool(tr)
     broadcast_transaction_into_network({
-        "transaction": Transaction(**t["transaction"]),
+        "transaction": tr,
         "callback": nodeState.get_callback_address()
     }, address_to_skip=t["callback"])
 

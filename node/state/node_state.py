@@ -18,8 +18,16 @@ class NodeState:
         self.node_address = None
         self.node_port = None
         self.mempool: List[Transaction] = []
+        self.unspent_transaction_outputs = {}
         self.difficulty = 3
         self.verify_ssl_cert = False
+
+    def add_transaction_to_mempool(self, transaction: Transaction):
+        if transaction not in self.mempool:
+            self.mempool.append(transaction)
+            logging.info(f"Transaction added to mempool: {transaction}")
+        else:
+            logging.info("Transaction already in mempool")
 
     def add_peer(self, peer):
         if peer in self.connected_peers:

@@ -5,7 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from cryptography.hazmat.primitives import serialization
 
 from client.broadcast import init_handshake, get_blockchain
-from keys import load_key
+from key_generator import get_key
 
 from api.client_comm import *
 from api.node_comm import *
@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 def init_state(args: Namespace):
-    nodeState.private_key = load_key("keys/private_key.pem")
+    nodeState.private_key = get_key(args.nodename)
     nodeState.mode = args.mode
     nodeState.node_address = args.address
     nodeState.node_port = args.port
@@ -51,6 +51,7 @@ def load_peers(peer_filename):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='KaYakCoin Node')
+    parser.add_argument('--nodename', type=str, required=False, help='Node name', default="node")
     parser.add_argument('--mode', type=str, required=False, help='Mode of operation', default="INIT")
     parser.add_argument('--address', type=str, required=False, help='Address', default="127.0.0.1")
     parser.add_argument('--port', type=int, required=False, help='Port number', default=2000)

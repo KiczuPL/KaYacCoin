@@ -2,14 +2,13 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 
 
-def generate_key(path: str):
+def generate_key(path: str) -> ec.EllipticCurvePrivateKey:
     private_key = ec.generate_private_key(ec.SECP256R1())
 
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption()
-        # encryption_algorithm=serialization.BestAvailableEncryption(b"passphrase")
     )
 
     with open(path, "wb") as f:
@@ -17,5 +16,13 @@ def generate_key(path: str):
 
     return private_key
 
+def get_key(node_name: str) -> ec.EllipticCurvePrivateKey:
+    try:
+        with open(f"keys/{node_name}_key.pem".encode(), "rb") as f:
+            private_key = serialization.load_pem_private_key(f.read(), password=None)
+    except FileNotFoundError:
+        private_key = generate_key(f"keys/{node_name}_key.pem")
 
-generate_key("keys/private_key.pem")
+    return private_key
+
+

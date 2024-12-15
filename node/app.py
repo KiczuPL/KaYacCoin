@@ -73,7 +73,7 @@ if __name__ == "__main__":
         logging.info("Initializing network, creating genesis block")
         nodeState.create_genesis_block()
 
-        logging.info("Starting miner")
-        start_scheduler()
+    logging.info("Starting miner")
+    start_scheduler()
 
     flask_app.run(host=args.address, port=args.port, ssl_context='adhoc', use_reloader=False)

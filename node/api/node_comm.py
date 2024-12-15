@@ -36,9 +36,9 @@ def broadcast_transaction():
 
 @flask_app.route('/blockBroadcast', methods=['POST'])
 def broadcast_block():
-    logging.info(f"Received broadcast block")
     t = request.get_json()
     block: Block = Block(**t["block"])
+    logging.info(f"Received broadcast block {block.data.index}")
     try:
         nodeState.append_block(block)
     except ValueError as e:

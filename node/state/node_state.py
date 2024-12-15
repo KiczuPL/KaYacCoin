@@ -25,9 +25,18 @@ class NodeState:
         self.node_port = None
         self.mempool: List[Transaction] = []
         self.unspent_transaction_outputs = {}
-        self.difficulty = 3
+        self.difficulty = 4
         self.coinbase_amount = 1000
         self.verify_ssl_cert = False
+        self.is_mining = True
+
+    def pause_mining(self):
+        self.is_mining = False
+        logging.info("Mining paused")
+
+    def resume_mining(self):
+        self.is_mining = True
+        logging.info("Mining resumed")
 
     def get_public_key_hex_str(self):
         return self.private_key.public_key().public_bytes(encoding=serialization.Encoding.DER,
@@ -52,9 +61,9 @@ class NodeState:
 
         if transaction not in self.mempool:
             self.mempool.append(transaction)
-            logging.info(f"Transaction added to mempool: {transaction}")
+            logging.debug(f"Transaction added to mempool: {transaction}")
         else:
-            logging.info("Transaction already in mempool")
+            logging.debug("Transaction already in mempool")
 
     def add_peer(self, peer):
         if peer in self.connected_peers:
@@ -93,16 +102,17 @@ class NodeState:
 
         if not validate_block(block, self.unspent_transaction_outputs, self.coinbase_amount):
             raise ValueError("Invalid block")
-
+        self.is_mining = False
         self.blockchain.append(block)
         self.defrag_mempool()
         self.update_utxos(block)
-        logging.info(f"Block added to blockchain: {block}")
+        logging.debug(f"Block added to blockchain: {block}")
+        self.is_mining = True
 
     def defrag_mempool(self):
-        logging.info("Defragging mempool")
+        logging.debug("Defragging mempool")
         self.mempool = [t for t in self.mempool if t not in self.blockchain[-1].data.transactions]
-        logging.info("Mempool defragged")
+        logging.debug("Mempool defragged")
 
     def create_genesis_block(self):
         logging.info("Creating genesis block")

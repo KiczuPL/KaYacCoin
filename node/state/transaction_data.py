@@ -33,3 +33,5 @@ class TransactionData(BaseModel):
     def calculate_hash(self):
         return hashlib.sha256(self.model_dump_json().encode()).hexdigest()
 
+    def __eq__(self, other):
+        return self.txIns == other.txIns and self.txOuts == other.txOuts

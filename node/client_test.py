@@ -1,6 +1,10 @@
+import logging
+
 import requests
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 
 from key_generator import get_key
 from state.transaction import Transaction
@@ -23,18 +27,17 @@ print(f"user2_public_key_hex: {user2_public_key_hex}")
 print(f"node1_public_key_hex: {node1_public_key_hex}")
 
 transaction_data = TransactionData(
-    txIns=[TxIn(txOutId="f9e167cacde8724418d7a158abfc542f2c579597f4c55029ea7920fd9577ad8b", txOutIndex=0)],
-    txOuts=[TxOut(address=user1_public_key_hex, amount=100)])
+    txIns=[TxIn(txOutId="d06383d89612f509a7986656e11940f858fe8fa187205df560867e9579a9f5e7", txOutIndex=0)],
+    txOuts=[TxOut(address=user1_public_key_hex, amount=500),TxOut(address=node1_public_key_hex, amount=500)])
 
 tx_hash = transaction_data.calculate_hash()
 print(f"tx_hash: {tx_hash}")
 transaction = Transaction(txId=tx_hash, signature=node1_key.sign(tx_hash.encode(), ec.ECDSA(hashes.SHA256())).hex(),
                           data=transaction_data)
 
-requests.post("http://localhost:2003/broadcast", json=transaction.model_dump())
-
-
+requests.post("https://localhost:2001/broadcast", json=transaction.model_dump(), verify=False)
 
 user1_public_key_hex = user1_key.public_key().public_bytes(encoding=serialization.Encoding.DER,
                                                            format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
-requests.get("http://localhost:2001/getBalance?address=" + user1_public_key_hex).json()
+
+requests.get("https://localhost:2001/getBalance?address=" + user1_public_key_hex, verify=False).json()

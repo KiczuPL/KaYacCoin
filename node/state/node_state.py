@@ -1,4 +1,5 @@
 import logging
+from math import log2
 from typing import List
 
 from cryptography.hazmat.primitives import serialization, hashes
@@ -44,10 +45,13 @@ class NodeState:
             time_diff = last_block_time - first_block_time
             expected_time_diff = self.difficulty_update_interval * self.target_block_time_seconds
             current_difficulty = self.blockchain[-1].data.difficulty
-            new_difficulty = int((expected_time_diff / time_diff) * current_difficulty)
-            logging.info(f"New difficulty: {expected_time_diff / time_diff} * {current_difficulty} = {new_difficulty}")
-            if new_difficulty - current_difficulty > 2:
-                new_difficulty = current_difficulty + 2
+
+            multiplier = log2(expected_time_diff / time_diff)
+            new_difficulty = int(multiplier * current_difficulty)
+
+            logging.info(f"New difficulty: {multiplier} * {current_difficulty} = {new_difficulty}")
+            if new_difficulty - current_difficulty > 4:
+                new_difficulty = current_difficulty + 4
             return new_difficulty
 
         return self.blockchain[-1].data.difficulty
@@ -166,9 +170,14 @@ class NodeState:
 
     def update_utxos(self, block):
         for transaction in block.data.transactions:
-            for txIn in transaction.data.txIns[1:]:
+            for txIn in transaction.data.txIns:
+                if txIn.txOutId == "0" and txIn.txOutIndex == block.data.index:
+                    continue
+                
+                logging.info(f"Removing UTXO: {txIn.txOutId}:{txIn.txOutIndex}")
                 del self.unspent_transaction_outputs[f"{txIn.txOutId}:{txIn.txOutIndex}"]
             for i, txOut in enumerate(transaction.data.txOuts):
+                logging.info(f"Adding UTXO: {transaction.txId}:{i}")
                 self.unspent_transaction_outputs[f"{transaction.txId}:{i}"] = txOut
 
 

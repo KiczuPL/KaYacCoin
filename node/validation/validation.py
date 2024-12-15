@@ -106,15 +106,15 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
     try:
         pub_key = serialization.load_der_public_key(bytes.fromhex(sender_address),
                                                     backend=EllipticCurvePublicKey)
-        pub_key.verify(bytes.fromhex(transaction.signature), bytes.fromhex(data_hash), ec.ECDSA(hashes.SHA256()))
+        pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
     except InvalidSignature:
         logging.info("Transaction signature is invalid")
         return False
 
     if sum([txOut.amount for txOut in transaction.data.txOuts]) != sum(
-            [unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}") for txIn in
+            [unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}").amount for txIn in
              transaction.data.txIns]):
-        logging.info("Transaction output amount is higher than input amount")
+        logging.info("Transaction output amount does not match input amount")
         return False
 
     return True

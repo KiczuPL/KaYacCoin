@@ -1,45 +1,78 @@
 import base64
+import time
 from idlelib.iomenu import encoding
+from idlelib.pyparse import trans
+from time import sleep
 
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 
 from key_generator import get_key
-from state.transaction_data import TxIn
+from state.transaction import create_coinbase
+
+hash = "00ff"
+print(bin(int(hash, 16))[2:].zfill(len(hash)*4))
+
+
+print(time.time())
+sleep(5)
+
+print(time.time())
+
+
 
 if []:
     print("sranie")
 
-
-
-
-
-
-
-tx1 = TxIn(txOutId="1", txOutIndex=1)
-tx2 = TxIn(txOutId="1", txOutIndex=2)
-
-print(tx1 == tx2)
-
-tx2.txOutIndex = 1
-print(tx1 == tx2)
-
-print({tx1, tx2})
-
 key = get_key("node1")
 raw = key.public_key().public_bytes(encoding=serialization.Encoding.DER,
                                     format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
-print(raw)
 
-data = "dupadupadupa"
 
-signature = key.sign(data.encode(), ec.ECDSA(hashes.SHA256()))
+pub_key_hex = key.public_key().public_bytes(encoding=serialization.Encoding.DER,format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
 
-k = serialization.load_der_public_key(bytes.fromhex(raw), backend=EllipticCurvePublicKey)
+transaction = create_coinbase(pub_key_hex, 0, 1000)
 
-print(base64.b64encode(k.public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)))
+hash = transaction.data.calculate_hash()
 
-print(k.verify(signature, (data+"a").encode(), ec.ECDSA(hashes.SHA256())))
+pub_key = serialization.load_der_public_key(bytes.fromhex(transaction.data.txOuts[0].address),
+                                                    backend=EllipticCurvePublicKey)
 
-# print(get_key("node1").public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo).decode())
+signature = key.sign(transaction.txId.encode(), ec.ECDSA(hashes.SHA256())).hex()
+
+print(signature)
+print(transaction.data.calculate_hash())
+
+try:
+    key.public_key().verify(bytes.fromhex(signature), transaction.data.calculate_hash().encode(), ec.ECDSA(hashes.SHA256()))
+    print("OK")
+except Exception as e:
+    pass
+
+
+
+col = {}
+
+
+col["a:1"] = transaction
+
+print(col)
+
+for key,value in col.items():
+    print(value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

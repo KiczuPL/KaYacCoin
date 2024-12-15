@@ -17,4 +17,4 @@ class Transaction(BaseModel):
     data: TransactionData
 
     def __eq__(self, other):
-        return self.message == other.message and self.timestamp == other.timestamp
+        return self.txId == other.txId and self.signature == other.signature and self.data == other.data

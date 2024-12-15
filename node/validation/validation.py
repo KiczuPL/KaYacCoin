@@ -6,29 +6,28 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 
 from state.block import Block
-from state.node_state import nodeState
 from state.transaction import Transaction
 
 
-def validate_block(block: Block) -> bool:
+def validate_block(block: Block, unspent_transaction_outputs: dict, expected_coinbase_amount: int) -> bool:
     if not block.is_hash_valid():
         logging.info("Block hash is invalid")
         return False
 
     coinbase = block.data.transactions[0]
-    if not validate_coinbase_transaction(coinbase):
+    if not validate_coinbase_transaction(coinbase, expected_coinbase_amount):
         logging.info("Coinbase transaction is invalid")
         return False
 
     for transaction in block.data.transactions[1:]:
-        if not validate_transaction(transaction):
+        if not validate_transaction(transaction, unspent_transaction_outputs):
             logging.info("Block contains invalid transaction")
             return False
 
     return True
 
 
-def validate_coinbase_transaction(transaction: Transaction) -> bool:
+def validate_coinbase_transaction(transaction: Transaction, expected_coinbase_amount: int) -> bool:
     data_hash = transaction.data.calculate_hash()
 
     if transaction.txId != data_hash:
@@ -46,22 +45,22 @@ def validate_coinbase_transaction(transaction: Transaction) -> bool:
     if len(transaction.data.txOuts) != 1:
         logging.info("Coinbase transaction has more than one output")
         return False
-    if transaction.data.txOuts[0].amount != nodeState.coinbase_amount:
+    if transaction.data.txOuts[0].amount != expected_coinbase_amount:
         logging.info("Coinbase transaction output amount is invalid")
         return False
 
     try:
         pub_key = serialization.load_der_public_key(bytes.fromhex(transaction.data.txOuts[0].address),
                                                     backend=EllipticCurvePublicKey)
-        pub_key.verify(bytes.fromhex(transaction.signature), bytes.fromhex(data_hash), ec.ECDSA(hashes.SHA256()))
+        pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
     except InvalidSignature:
-        logging.info("Transaction signature is invalid")
+        logging.info("Transaction signature is invalid. ")
         return False
 
     return True
 
 
-def validate_transaction(transaction: Transaction) -> bool:
+def validate_transaction(transaction: Transaction, unspent_transaction_outputs: dict) -> bool:
     data_hash = transaction.data.calculate_hash()
 
     if transaction.txId != data_hash:
@@ -71,6 +70,7 @@ def validate_transaction(transaction: Transaction) -> bool:
     if len(transaction.data.txIns) == 0:
         logging.info("Transaction has no inputs")
         return False
+
     if len(transaction.data.txOuts) == 0:
         logging.info("Transaction has no outputs")
         return False
@@ -81,7 +81,7 @@ def validate_transaction(transaction: Transaction) -> bool:
 
     unique_input_address = set()
     for txIn in transaction.data.txIns:
-        uTxO = nodeState.get_unspent_transaction_output(txIn.txOutId, txIn.txOutIndex)
+        uTxO = unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}")
         if uTxO is None:
             logging.info("Transaction input is not unspent or does not exist")
             return False
@@ -101,7 +101,7 @@ def validate_transaction(transaction: Transaction) -> bool:
         return False
 
     if sum([txOut.amount for txOut in transaction.data.txOuts]) != sum(
-            [nodeState.get_unspent_transaction_output(txIn.txOutId, txIn.txOutIndex).amount for txIn in
+            [unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}") for txIn in
              transaction.data.txIns]):
         logging.info("Transaction output amount is higher than input amount")
         return False

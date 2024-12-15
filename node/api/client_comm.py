@@ -29,3 +29,21 @@ def broadcast():
 @flask_app.route('/mempool', methods=['GET'])
 def get_mempool():
     return jsonify([transaction.model_dump() for transaction in nodeState.mempool])
+
+
+@flask_app.route('/getBalance', methods=['GET'])
+def get_balance():
+    params = request.args
+    utxos = []
+    for key, value in nodeState.unspent_transaction_outputs.items():
+        if value.address == params["address"]:
+            utxos.append({
+                "txOutId": key.split(":")[0],
+                "txOutIndex": key.split(":")[1],
+                "amount": value.amount
+            })
+
+    return jsonify({
+        "balance": sum([utxo["amount"] for utxo in utxos]),
+        "uTxOs": utxos
+    })

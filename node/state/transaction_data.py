@@ -32,3 +32,4 @@ class TransactionData(BaseModel):
 
     def calculate_hash(self):
         return hashlib.sha256(self.model_dump_json().encode()).hexdigest()
+

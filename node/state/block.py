@@ -15,7 +15,8 @@ class Block(BaseModel):
         return self.hash
 
     def is_hash_valid(self) -> bool:
-        return self.hash == self.calculate_hash() and self.hash.startswith("0" * self.data.difficulty)
+        hash_binary = bin(int(self.hash, 16))[2:].zfill(256)
+        return self.hash == self.calculate_hash() and hash_binary.startswith("0" * self.data.difficulty)
 
     def is_genesis_block(self) -> bool:
         return self.data.index == 0 and self.data.previous_hash == "0"

@@ -9,9 +9,14 @@ from state.block import Block
 from state.transaction import Transaction
 
 
-def validate_block(block: Block, unspent_transaction_outputs: dict, expected_coinbase_amount: int) -> bool:
+def validate_block(block: Block, unspent_transaction_outputs: dict, expected_coinbase_amount: int,
+                   expected_block_difficulty: int) -> bool:
     if not block.is_hash_valid():
         logging.info("Block hash is invalid")
+        return False
+
+    if block.data.difficulty != expected_block_difficulty:
+        logging.info("Block difficulty is invalid")
         return False
 
     coinbase = block.data.transactions[0]
@@ -23,6 +28,12 @@ def validate_block(block: Block, unspent_transaction_outputs: dict, expected_coi
         if not validate_transaction(transaction, unspent_transaction_outputs):
             logging.info("Block contains invalid transaction")
             return False
+
+    all_tx_ins = [txIn for transaction in block.data.transactions for txIn in transaction.data.txIns]
+    all_unique_tx_ins = set(all_tx_ins)
+    if len(all_tx_ins) != len(all_unique_tx_ins):
+        logging.info("Block contains duplicated transaction inputs")
+        return False
 
     return True
 

@@ -10,13 +10,6 @@ from state.transaction import Transaction
 def broadcast_transaction_into_network(transaction_request, address_to_skip=None):
     transaction: Transaction = transaction_request["transaction"]
 
-    if transaction not in nodeState.mempool:
-        nodeState.mempool.append(transaction)
-        nodeState.print_mempool()
-    else:
-        logging.info("Transaction already in mempool")
-        return
-
     request_to_broadcast = {
         "transaction": transaction.model_dump(),
         "callback": nodeState.get_callback_address()
@@ -57,13 +50,13 @@ def init_handshake(peers):
 
 def send_to_all_peers(request_body, address_to_skip, endpoint, content=""):
     to_remove = []
-    logging.info(f"Broadcasting message/block: {content} to all peers")
+    logging.debug(f"Broadcasting message/block: {content} to all peers")
     for peer in nodeState.connected_peers:
-        logging.info(f"Peer: {peer}")
+        logging.debug(f"Peer: {peer}")
         if peer == address_to_skip:
             continue
         try:
-            logging.info(f"Broadcasting message/block to peer: {peer}")
+            logging.debug(f"Broadcasting message/block to peer: {peer}")
             response = requests.post(f"https://{peer}/{endpoint}", json=request_body,
                                      verify=nodeState.verify_ssl_cert)
             response.raise_for_status()

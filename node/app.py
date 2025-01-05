@@ -5,7 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from cryptography.hazmat.primitives import serialization
 
 from client.broadcast import init_handshake, get_blockchain
-from key_generator import get_key
+from key_generator import get_pub_key_hex_str
 
 from api.client_comm import *
 from api.node_comm import *
@@ -18,13 +18,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 def init_state(args: Namespace):
-    nodeState.private_key = get_key(args.nodename)
+    nodeState.public_key_hex_str = get_pub_key_hex_str(args.nodename)
     nodeState.mode = args.mode
     nodeState.node_address = args.address
     nodeState.node_port = args.port
     nodeState.start_peers = [args.peer] if args.peer else []
-    nodeState.node_id = nodeState.private_key.public_key().public_bytes(encoding=serialization.Encoding.DER,
-                                                                        format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
 
 
 def start_scheduler():

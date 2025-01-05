@@ -20,8 +20,7 @@ class NodeState:
         self.start_peers = []
         self.connected_peers = []
         self.blockchain: List[Block] = []
-        self.private_key: EllipticCurvePrivateKey | None = None
-        self.node_id = None
+        self.public_key_hex_str: str | None = None
         self.node_address = None
         self.node_port = None
         self.mempool: List[Transaction] = []
@@ -70,8 +69,7 @@ class NodeState:
         logging.info("Mining resumed")
 
     def get_public_key_hex_str(self):
-        return self.private_key.public_key().public_bytes(encoding=serialization.Encoding.X962,
-                                                          format=serialization.PublicFormat.CompressedPoint).hex()
+        return self.public_key_hex_str
 
     def get_unspent_transaction_output(self, txOutId: str, txOutIndex: int):
         return self.unspent_transaction_outputs.get(f"{txOutId}:{txOutIndex}")

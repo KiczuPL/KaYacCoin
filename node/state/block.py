@@ -1,14 +1,19 @@
 import time
+from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 from state.block_data import BlockData
 from state.transaction import Transaction
 
+class BlockMetadata:
+    children_hashes: List[str]
+    unspent_transaction_outputs = {}
 
 class Block(BaseModel):
     hash: str
     data: BlockData
+    _metadata: BlockMetadata = PrivateAttr()
 
     def calculate_hash(self) -> str:
         self.hash = self.data.calculate_hash()

@@ -1,3 +1,5 @@
+import logging
+
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 
@@ -24,5 +26,18 @@ def get_key(node_name: str) -> ec.EllipticCurvePrivateKey:
         private_key = generate_key(f"keys/{node_name}_key.pem")
 
     return private_key
+
+
+
+def get_pub_key_hex_str(node_name: str) -> str:
+    try:
+        with open(f"keys/{node_name}_key.pub".encode(), "rb") as f:
+            pub_key = f.read().decode()
+    except FileNotFoundError:
+        logging.error("Public key not found")
+        raise FileNotFoundError(f"Public key for {node_name} not found")
+
+    return pub_key
+
 
 

@@ -78,6 +78,7 @@ def generate_key(identity_name: str, passphrase: str):
         os.makedirs(directory)
 
     file_path = os.path.join(directory, f"{identity_name}.pem")
+    file_path_public_key = os.path.join(directory, f"{identity_name}.pub")
     private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
 
     private_pem = private_key.private_bytes(
@@ -85,6 +86,12 @@ def generate_key(identity_name: str, passphrase: str):
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption()
     )
+
+    # Konwersja klucza publicznego na format hex (dla pliku tekstowego)
+    public_key_hex = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    ).hex()
 
     salt = os.urandom(16)
     aes_key = derive_key_from_password(passphrase, salt)
@@ -95,6 +102,9 @@ def generate_key(identity_name: str, passphrase: str):
         f.write(encrypted_data["nonce"])
         f.write(encrypted_data["tag"])
         f.write(encrypted_data["ciphertext"])
+
+    with open(file_path_public_key, "w") as f:
+            f.write(public_key_hex)
 
     return private_key
 
@@ -131,8 +141,8 @@ def get_public_key(private_key):
 
 
 # Funkcja podpisująca wiadomość
-def sign_message(private_key, message: bytes) -> bytes:
-    return private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+def sign_message(private_key, message: str) -> str:
+    return private_key.sign(message.encode(), ec.ECDSA(hashes.SHA256())).hex()
 
 
 # Funkcja weryfikująca podpis

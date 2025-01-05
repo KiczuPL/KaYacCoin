@@ -61,8 +61,7 @@ def validate_coinbase_transaction(transaction: Transaction, expected_coinbase_am
         return False
 
     try:
-        pub_key = serialization.load_der_public_key(bytes.fromhex(transaction.data.txOuts[0].address),
-                                                    backend=EllipticCurvePublicKey)
+        pub_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), bytes.fromhex(transaction.data.txOuts[0].address))
         pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
     except InvalidSignature:
         logging.info("Transaction signature is invalid. ")
@@ -104,8 +103,7 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
     sender_address = list(unique_input_address)[0]
 
     try:
-        pub_key = serialization.load_der_public_key(bytes.fromhex(sender_address),
-                                                    backend=EllipticCurvePublicKey)
+        pub_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), bytes.fromhex(sender_address))
         pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
     except InvalidSignature:
         logging.info("Transaction signature is invalid")

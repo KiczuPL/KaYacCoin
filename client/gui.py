@@ -270,7 +270,7 @@ class CryptoWalletApp:
 
             if sum < 0:
                 transaction_outputs.append(
-                    TxOut(address=private_key.public_key().public_bytes(encoding=serialization.Encoding.DER,format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
+                    TxOut(address=private_key.public_key().public_bytes(encoding=serialization.Encoding.X962,format=serialization.PublicFormat.CompressedPoint).hex()
                           , amount=-sum)
                 )
 

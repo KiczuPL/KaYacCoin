@@ -23,9 +23,10 @@ def generate_key(path: str) -> ec.EllipticCurvePrivateKey:
 
 def get_key(node_name: str) -> ec.EllipticCurvePrivateKey:
     try:
-        with open(f"keys/{node_name}_key.pem".encode(), "rb") as f:
+        with open(f"../node/keys/{node_name}_key.pem".encode(), "rb") as f:
             private_key = serialization.load_pem_private_key(f.read(), password=None)
     except FileNotFoundError:
+        print(f"Generating new key for {node_name}")
         private_key = generate_key(f"../node/keys/{node_name}_key.pem")
 
     return private_key
@@ -47,8 +48,8 @@ def save_key(identity_name: str, passphrase: str, private_key: ec.EllipticCurveP
     )
 
     public_key_hex = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.DER,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        encoding=serialization.Encoding.X962,
+        format=serialization.PublicFormat.CompressedPoint
     ).hex()
 
     salt = os.urandom(16)

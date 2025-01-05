@@ -70,8 +70,8 @@ class NodeState:
         logging.info("Mining resumed")
 
     def get_public_key_hex_str(self):
-        return self.private_key.public_key().public_bytes(encoding=serialization.Encoding.DER,
-                                                          format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
+        return self.private_key.public_key().public_bytes(encoding=serialization.Encoding.X962,
+                                                          format=serialization.PublicFormat.CompressedPoint).hex()
 
     def get_unspent_transaction_output(self, txOutId: str, txOutIndex: int):
         return self.unspent_transaction_outputs.get(f"{txOutId}:{txOutIndex}")

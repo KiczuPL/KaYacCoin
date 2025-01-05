@@ -46,7 +46,7 @@ class NodeState:
             expected_time_diff = self.difficulty_update_interval * self.target_block_time_seconds
             current_difficulty = self.blockchain[-1].data.difficulty
 
-            multiplier = log2(expected_time_diff / time_diff)
+            multiplier = log2((expected_time_diff / time_diff) + 1)
             new_difficulty = int(multiplier * current_difficulty)
 
             logging.info(f"New difficulty: {multiplier} * {current_difficulty} = {new_difficulty}")
@@ -173,7 +173,7 @@ class NodeState:
             for txIn in transaction.data.txIns:
                 if txIn.txOutId == "0" and txIn.txOutIndex == block.data.index:
                     continue
-                
+
                 logging.info(f"Removing UTXO: {txIn.txOutId}:{txIn.txOutIndex}")
                 del self.unspent_transaction_outputs[f"{txIn.txOutId}:{txIn.txOutIndex}"]
             for i, txOut in enumerate(transaction.data.txOuts):

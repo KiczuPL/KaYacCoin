@@ -13,7 +13,7 @@ def miner_scheduled_job():
         block = build_block(index=blockchain_length_at_start, previous_hash=nodeState.blockchain[-1].hash,
                             difficulty=nodeState.get_difficulty_for_block_index(index=blockchain_length_at_start),
                             timestamp=time.time(), nonce=0,
-                            transactions=[nodeState.create_signed_coinbase_transaction()] + nodeState.mempool)
+                            transactions=[nodeState.create_coinbase_transaction()] + nodeState.mempool)
         block = mine_block(block, nodeState.is_mining_container)
         if block is None:
             nodeState.resume_mining_if_possible()

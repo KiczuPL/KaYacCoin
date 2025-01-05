@@ -1,9 +1,8 @@
 import logging
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 
 from state.block import Block
 from state.transaction import Transaction
@@ -60,11 +59,12 @@ def validate_coinbase_transaction(transaction: Transaction, expected_coinbase_am
         logging.info("Coinbase transaction output amount is invalid")
         return False
 
-    try:
-        pub_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), bytes.fromhex(transaction.data.txOuts[0].address))
-        pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
-    except InvalidSignature:
-        logging.info("Transaction signature is invalid. ")
+    if validate_pub_key_str(transaction.data.txOuts[0].address) is False:
+        logging.info("Coinbase transaction output address is invalid")
+        return False
+
+    if transaction.signature != "":
+        logging.info("Coinbase should have an empty signature")
         return False
 
     return True
@@ -102,6 +102,10 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
         return False
     sender_address = list(unique_input_address)[0]
 
+    if validate_pub_key_str(sender_address) is False:
+        logging.info("Transaction input address is invalid")
+        return False
+
     try:
         pub_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), bytes.fromhex(sender_address))
         pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
@@ -116,3 +120,12 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
         return False
 
     return True
+
+def validate_pub_key_str(public_key_str: str) -> bool:
+    try:
+        if len(public_key_str) != 66 or public_key_str[:2] not in ["02", "03"]:
+            return False
+        ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), bytes.fromhex(public_key_str))
+        return True
+    except ValueError:
+        return False

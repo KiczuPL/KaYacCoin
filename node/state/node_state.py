@@ -79,10 +79,9 @@ class NodeState:
     def add_unspent_transaction_output(self, txOutId: str, txOutIndex: int, txOut: TxOut):
         self.unspent_transaction_outputs[f"{txOutId}:{txOutIndex}"] = txOut
 
-    def create_signed_coinbase_transaction(self):
+    def create_coinbase_transaction(self):
         coinbase = create_coinbase(self.get_public_key_hex_str(), self.blockchain[-1].data.index + 1,
                                    self.coinbase_amount)
-        coinbase.signature = self.private_key.sign(coinbase.txId.encode(), ec.ECDSA(hashes.SHA256())).hex()
         return coinbase
 
     def add_transaction_to_mempool(self, transaction: Transaction):
@@ -158,7 +157,6 @@ class NodeState:
         logging.info("Creating genesis block")
         first_coinbase = create_coinbase(self.get_public_key_hex_str(), 0,
                                          self.coinbase_amount)
-        first_coinbase.signature = self.private_key.sign(first_coinbase.txId.encode(), ec.ECDSA(hashes.SHA256())).hex()
 
         genesis = mine_block(
             Block.genesis_block(first_coinbase, difficulty=self.get_difficulty_for_block_index(index=0)),

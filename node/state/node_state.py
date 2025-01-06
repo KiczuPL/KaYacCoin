@@ -87,17 +87,20 @@ class NodeState:
             logging.info("Transaction is invalid")
             raise ValueError("Transaction is invalid")
 
-        if transaction not in self.mempool:
-            self.mempool.append(transaction)
-            logging.debug(f"Transaction added to mempool: {transaction}")
-        else:
+        if transaction in self.mempool:
             logging.debug("Transaction already in mempool")
+            raise ValueError("Transaction already in mempool")
 
+        staged_tx_ins = {}
         for txIn in transaction.data.txIns:
             if f"{txIn.txOutId}:{txIn.txOutIndex}" in self.mempool_tx_ins:
                 logging.info("Same transaction input already in mempool")
                 raise ValueError("Same transaction input already in mempool")
-            self.mempool_tx_ins[f"{txIn.txOutId}:{txIn.txOutIndex}"] = transaction
+            staged_tx_ins[f"{txIn.txOutId}:{txIn.txOutIndex}"] = transaction
+
+        self.mempool.append(transaction)
+        self.mempool_tx_ins.update(staged_tx_ins)
+        logging.debug(f"Transaction added to mempool: {transaction}")
 
     def add_peer(self, peer):
         if peer in self.connected_peers:

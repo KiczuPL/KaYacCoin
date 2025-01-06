@@ -90,11 +90,16 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
         return False
 
     unique_input_address = set()
+    transaction_inputs_txids = []
     for txIn in transaction.data.txIns:
         uTxO = unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}")
         if uTxO is None:
-            logging.info("Transaction input is not unspent or does not exist")
+            logging.info("Transaction input is already spent or does not exist")
             return False
+        if txIn.txOutId in transaction_inputs_txids:
+            logging.info(f"Utxo {txIn.txOutId} is already used in this transaction")
+            return False
+        transaction_inputs_txids.append(txIn.txOutId)
         unique_input_address.add(uTxO.address)
 
     if len(unique_input_address) != 1:

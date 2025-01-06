@@ -145,6 +145,7 @@ class NodeState:
                 raise ValueError("Block is not genesis block")
             self.blockchain_blocks[block.hash] = block
             self.blockchain_leaf_blocks[block.hash] = block
+            block.get_metadata().unspent_transaction_outputs = block.get_metadata().unspent_transaction_outputs + block.data.transactions[0].data.txOuts
             return
 
         if block.hash in self.blockchain_blocks:
@@ -154,13 +155,15 @@ class NodeState:
             raise ValueError("Invalid block, previous hash does not match any block")
 
         parent_block = self.blockchain_blocks[block.data.previous_hash]
+        block.get_metadata().unspent_transaction_outputs = self.build_block_utxos(block, parent_block)
 
-        if not validate_block(block, self.unspent_transaction_outputs, self.coinbase_amount,
+        if not validate_block(block, self.coinbase_amount,
                               self.get_difficulty_for_block(block), parent_block.data.index + 1):
             raise ValueError("Invalid block")
         # self.pause_mining()
         self.blockchain_blocks[block.hash] = block
         self.blockchain_leaf_blocks[block.hash] = block
+        parent_block.get_metadata().children_hashes.append(block.hash)
         if block.data.previous_hash in self.blockchain_leaf_blocks:
             del self.blockchain_leaf_blocks[block.data.previous_hash]
         self.defrag_mempool(block)
@@ -188,6 +191,21 @@ class NodeState:
     def load_blockchain(self, blockchain: dict):
         for block in blockchain:
             self.append_block(Block(**block))
+
+    def build_block_utxos(self, block: Block, parent_block: Block):
+        utxos = parent_block.get_metadata().unspent_transaction_outputs.copy()
+        for transaction in block.data.transactions:
+            for txIn in transaction.data.txIns:
+                if txIn.txOutId == "0" and txIn.txOutIndex == block.data.index:
+                    continue
+
+                logging.info(f"Removing UTXO: {txIn.txOutId}:{txIn.txOutIndex}")
+                del utxos[f"{txIn.txOutId}:{txIn.txOutIndex}"]
+
+            for i, txOut in enumerate(transaction.data.txOuts):
+                logging.info(f"Adding UTXO: {transaction.txId}:{i}")
+                utxos[f"{transaction.txId}:{i}"] = txOut
+        return utxos
 
     def update_utxos(self, block):
         for transaction in block.data.transactions:

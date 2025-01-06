@@ -1,6 +1,6 @@
 import logging
 from math import log2
-from typing import List
+from typing import List, Dict
 
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -20,6 +20,7 @@ class NodeState:
         self.start_peers = []
         self.connected_peers = []
         self.blockchain: List[Block] = []
+        self.blockchain_blocks: Dict[str, Block] = {}
         self.public_key_hex_str: str | None = None
         self.node_address = None
         self.node_port = None
@@ -127,6 +128,7 @@ class NodeState:
             if not block.is_genesis_block():
                 raise ValueError("Block is not genesis block")
             self.blockchain.append(block)
+            return
 
         if len(self.blockchain) > block.data.index:
             raise ValueError("Block already in blockchain")
@@ -142,6 +144,7 @@ class NodeState:
             raise ValueError("Invalid block")
         self.pause_mining()
         self.blockchain.append(block)
+        self.blockchain_blocks[block.hash] = block
         self.defrag_mempool()
         self.update_utxos(block)
         logging.debug(f"Block added to blockchain: {block}")
@@ -162,7 +165,7 @@ class NodeState:
         genesis = mine_block(
             Block.genesis_block(first_coinbase, difficulty=self.get_difficulty_for_block_index(index=0)),
             abort_flag_container=self.is_mining_container)
-        self.blockchain.append(genesis)
+        self.append_block(genesis)
 
     def load_blockchain(self, blockchain: dict):
         self.blockchain = [Block(**block) for block in blockchain]

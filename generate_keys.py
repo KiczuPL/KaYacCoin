@@ -5,17 +5,8 @@ from client.wallet import derive_key_from_password, encrypt_with_aes_gcm
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 
-def generate_key(path: str) -> ec.EllipticCurvePrivateKey:
+def generate_key() -> ec.EllipticCurvePrivateKey:
     private_key = ec.generate_private_key(ec.SECP256R1())
-
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption()
-    )
-
-    with open(path, "wb") as f:
-        f.write(private_pem)
 
     return private_key
 
@@ -28,16 +19,6 @@ def get_pub_key_hex_str(node_name: str) -> str:
         raise FileNotFoundError(f"Public key for {node_name} not found")
 
     return pub_key
-
-
-def get_key(node_name: str, dir_str: str) -> ec.EllipticCurvePrivateKey:
-    try:
-        with open(f"{dir_str}/{node_name}_key.pem".encode(), "rb") as f:
-            private_key = serialization.load_pem_private_key(f.read(), password=None)
-    except FileNotFoundError:
-        private_key = generate_key(f"{dir_str}/{node_name}_key.pem")
-
-    return private_key
 
 
 def save_key(identity_name: str, passphrase: str, private_key: ec.EllipticCurvePrivateKey, dir_str: str):
@@ -77,10 +58,10 @@ client_key_dir = "client/keys"
 node_key_dir = "node/keys"
 
 password = "111"
-nodes = ["node1", "node2", "node3", "node4"]
+nodes = ["node1", "node2", "node3", "node4", "node5", "node6"]
 
 for node in nodes:
-    priv_key = get_key(node, client_key_dir)
+    priv_key = generate_key()
     save_key(node, password, priv_key, client_key_dir)
     with open(f"{node_key_dir}/{node}_key.pub", "w") as f:
         f.write(priv_key.public_key().public_bytes(

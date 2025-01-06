@@ -1,8 +1,8 @@
 import argparse
+import logging
 from argparse import Namespace
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from cryptography.hazmat.primitives import serialization
 
 from client.broadcast import init_handshake, get_blockchain
 from key_generator import get_pub_key_hex_str
@@ -16,6 +16,8 @@ from utils.miner_job import miner_scheduled_job
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+logger = logging.getLogger('apscheduler')
+logger.setLevel(logging.ERROR)
 
 def init_state(args: Namespace):
     nodeState.public_key_hex_str = get_pub_key_hex_str(args.nodename)
@@ -30,7 +32,7 @@ def start_scheduler():
     scheduler.add_job(
         miner_scheduled_job,
         'interval',
-        seconds=10,
+        seconds=1,
         max_instances=1,
         id='data_task'
     )
@@ -74,4 +76,4 @@ if __name__ == "__main__":
     logging.info("Starting miner")
     start_scheduler()
 
-    flask_app.run(host=args.address, port=args.port, ssl_context='adhoc', use_reloader=False)
+    flask_app.run(host=args.address, port=args.port, use_reloader=False)

@@ -1,12 +1,15 @@
 import logging
 
-from flask import request, jsonify
+from flask import request, jsonify, render_template
 
 from client.broadcast import broadcast_transaction_into_network
 from flask_app import flask_app
 from state.node_state import nodeState
 from state.transaction import Transaction
 
+@flask_app.route('/', methods=['GET'])
+def show_chain():
+    return render_template('index.html')
 
 @flask_app.route('/isAlive', methods=['GET'])
 def is_alive():

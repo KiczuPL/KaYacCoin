@@ -1,10 +1,7 @@
 import logging
 from math import log2
+import random
 from typing import List, Dict
-
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 
 from state.block import Block
 from state.transaction import Transaction, create_coinbase
@@ -19,32 +16,51 @@ class NodeState:
         self.mode = "INIT"
         self.start_peers = []
         self.connected_peers = []
-        self.blockchain: List[Block] = []
         self.blockchain_blocks: Dict[str, Block] = {}
+        self.blockchain_leaf_blocks: Dict[str, Block] = {}
+        # self.orphan_blocks_by_prev_hash: Dict[str, Block] = {} todo: implement later
         self.public_key_hex_str: str | None = None
         self.node_address = None
         self.node_port = None
         self.mempool: List[Transaction] = []
         self.mempool_tx_ins = {}
         self.unspent_transaction_outputs = {}
-        self.starting_difficulty = 17
+        self.starting_difficulty = 1
         self.coinbase_amount = 1000
         self.verify_ssl_cert = False
         self.is_mining = True
         self.is_mining_container = {"value": True}
-        self.difficulty_update_interval = 10
-        self.target_block_time_seconds = 30
+        self.difficulty_update_interval = 150
+        self.target_block_time_seconds = 10
 
-    def get_difficulty_for_block_index(self, index: int):
-        if index == 0:
+    def get_next_mining_base_block(self) -> Block:
+        max_index = max([block.data.index for block in self.blockchain_leaf_blocks.values()])
+        mx_blocks = [block for block in self.blockchain_leaf_blocks.values() if block.data.index == max_index]
+        return random.choice(mx_blocks)
+
+        # return sorted(self.blockchain_leaf_blocks.values(), key=lambda x: (-x.data.index))[0]
+
+    def get_dumped_blockchain(self):
+        chain = [block.model_dump() for block in self.blockchain_blocks.values()]
+        return sorted(chain, key=lambda x: (x["data"]["index"], x["data"]["timestamp"]))
+
+    def get_block_nth_ancestor(self, block: Block, n: int):
+        if n == 0:
+            return block
+        return self.get_block_nth_ancestor(self.blockchain_blocks[block.data.previous_hash], n - 1)
+
+    def get_difficulty_for_block(self, block: Block):
+        if block.data.index == 0:
             return self.starting_difficulty
 
-        if index % self.difficulty_update_interval == 0:
-            first_block_time = self.blockchain[-self.difficulty_update_interval].data.timestamp
-            last_block_time = self.blockchain[-1].data.timestamp
+        parent_block = self.blockchain_blocks[block.data.previous_hash]
+        if block.data.index % self.difficulty_update_interval == 0:
+            last_recalculated_block = self.get_block_nth_ancestor(block, self.difficulty_update_interval)
+            first_block_time = last_recalculated_block.data.timestamp
+            last_block_time = parent_block.data.timestamp
             time_diff = last_block_time - first_block_time
             expected_time_diff = self.difficulty_update_interval * self.target_block_time_seconds
-            current_difficulty = self.blockchain[-1].data.difficulty
+            current_difficulty = parent_block.data.difficulty
 
             multiplier = log2((expected_time_diff / time_diff) + 1)
             new_difficulty = int(multiplier * current_difficulty)
@@ -54,7 +70,7 @@ class NodeState:
                 new_difficulty = current_difficulty + 4
             return new_difficulty
 
-        return self.blockchain[-1].data.difficulty
+        return parent_block.data.difficulty
 
     def pause_mining(self):
         self.is_mining = False
@@ -78,8 +94,8 @@ class NodeState:
     def add_unspent_transaction_output(self, txOutId: str, txOutIndex: int, txOut: TxOut):
         self.unspent_transaction_outputs[f"{txOutId}:{txOutIndex}"] = txOut
 
-    def create_coinbase_transaction(self):
-        coinbase = create_coinbase(self.get_public_key_hex_str(), self.blockchain[-1].data.index + 1,
+    def create_coinbase_transaction_for_block(self, block: Block):
+        coinbase = create_coinbase(self.get_public_key_hex_str(), block.data.index,
                                    self.coinbase_amount)
         return coinbase
 
@@ -124,37 +140,39 @@ class NodeState:
         logging.info(f"MemPool: {self.mempool}")
 
     def append_block(self, block: Block):
-        if len(self.blockchain) == 0:
+        if not self.blockchain_blocks:
             if not block.is_genesis_block():
                 raise ValueError("Block is not genesis block")
-            self.blockchain.append(block)
+            self.blockchain_blocks[block.hash] = block
+            self.blockchain_leaf_blocks[block.hash] = block
             return
 
-        if len(self.blockchain) > block.data.index:
+        if block.hash in self.blockchain_blocks:
             raise ValueError("Block already in blockchain")
 
-        if block.data.index != len(self.blockchain):
-            raise ValueError("Block is not next in sequence")
+        if not block.data.previous_hash in self.blockchain_blocks:
+            raise ValueError("Invalid block, previous hash does not match any block")
 
-        if not block.data.previous_hash == self.blockchain[-1].hash:
-            raise ValueError("Invalid block, hash does not match previous block")
+        parent_block = self.blockchain_blocks[block.data.previous_hash]
 
         if not validate_block(block, self.unspent_transaction_outputs, self.coinbase_amount,
-                              self.get_difficulty_for_block_index(block.data.index)):
+                              self.get_difficulty_for_block(block), parent_block.data.index + 1):
             raise ValueError("Invalid block")
-        self.pause_mining()
-        self.blockchain.append(block)
+        # self.pause_mining()
         self.blockchain_blocks[block.hash] = block
-        self.defrag_mempool()
+        self.blockchain_leaf_blocks[block.hash] = block
+        if block.data.previous_hash in self.blockchain_leaf_blocks:
+            del self.blockchain_leaf_blocks[block.data.previous_hash]
+        self.defrag_mempool(block)
         self.update_utxos(block)
         logging.debug(f"Block added to blockchain: {block}")
-        self.allow_mining()
+        # self.allow_mining()
 
-    def defrag_mempool(self):
+    def defrag_mempool(self, block: Block):
         logging.debug("Defragging mempool")
-        self.mempool = [t for t in self.mempool if t not in self.blockchain[-1].data.transactions]
+        self.mempool = [t for t in self.mempool if t not in block.data.transactions]
         self.mempool_tx_ins = {key: value for key, value in self.mempool_tx_ins.items() if
-                               value not in self.blockchain[-1].data.transactions}
+                               value not in block.data.transactions}
         logging.debug("Mempool defragged")
 
     def create_genesis_block(self):
@@ -163,12 +181,13 @@ class NodeState:
                                          self.coinbase_amount)
 
         genesis = mine_block(
-            Block.genesis_block(first_coinbase, difficulty=self.get_difficulty_for_block_index(index=0)),
+            Block.genesis_block(first_coinbase, difficulty=self.starting_difficulty),
             abort_flag_container=self.is_mining_container)
         self.append_block(genesis)
 
     def load_blockchain(self, blockchain: dict):
-        self.blockchain = [Block(**block) for block in blockchain]
+        for block in blockchain:
+            self.append_block(Block(**block))
 
     def update_utxos(self, block):
         for transaction in block.data.transactions:

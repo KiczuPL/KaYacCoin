@@ -1,4 +1,3 @@
-import hashlib
 import os
 import requests
 import tkinter as tk
@@ -7,12 +6,10 @@ from tkinter import messagebox, Toplevel, simpledialog, ttk
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from client.transaction import TxOut, TxIn, TransactionData, Transaction
-from wallet import generate_key, load_private_key, get_public_key, decrypt_pem_file, sign_message
-from wallet import sanitize_identity_name, create_message, serialize_message_to_json
+from wallet import generate_key, load_private_key
+from wallet import sanitize_identity_name
 from cryptography.hazmat.primitives import serialization, hashes
-import json
 import pyperclip
-import base64
 import logging
 
 # Konfiguracja logowania
@@ -163,7 +160,7 @@ class CryptoWalletApp:
                 sanitized_identity = sanitize_identity_name(identity)
                 public_key_hex = self.identity_name_to_pub_key_dict[sanitized_identity]
 
-                response = requests.get(f"https://{node_address}/getBalance?address={public_key_hex}", verify=False)
+                response = requests.get(f"http://{node_address}/getBalance?address={public_key_hex}", verify=False)
                 response.raise_for_status()
                 response_body = response.json()
 
@@ -284,7 +281,7 @@ class CryptoWalletApp:
                 data=transaction_data
             )
 
-            requests.post(f"https://{self.node_address_entry.get()}/broadcast", json=transaction.model_dump(), verify=False)
+            requests.post(f"http://{self.node_address_entry.get()}/broadcast", json=transaction.model_dump(), verify=False)
 
             messagebox.showinfo("Sukces", "Wysłano transakcję")
 
@@ -305,7 +302,7 @@ class CryptoWalletApp:
             return
 
         try:
-            response = requests.get(f"https://{node_address}/isAlive", verify=False)
+            response = requests.get(f"http://{node_address}/isAlive", verify=False)
             response.raise_for_status()
             messagebox.showinfo("Sukces", f"Połączenie z nodem {node_address} udane!")
         except Exception as e:

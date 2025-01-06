@@ -7,7 +7,7 @@ ports = [2000, 2001, 2002, 2003]
 chains = []
 
 for i, port in enumerate(ports):
-    url = f"https://localhost:{port}/allBlocks"
+    url = f"http://localhost:{port}/allBlocks"
     response = requests.request("GET", url, verify=False)
     body = response.json()
     chains.append(body)

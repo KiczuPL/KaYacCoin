@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .blockchain {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .row {
+            display: flex;
+            margin: 10px 0;
+        }
+
+        .block {
+            border: 2px solid #333;
+            padding: 10px;
+            margin: 5px;
+            background-color: #f3f3f3;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+
+        .block h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .block p {
+            margin: 5px 0;
+            font-size: 14px;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>Blockchain Viewer</h1>
+    <div id="blockchain" class="blockchain"></div>
+
+    <script>
+        // Funkcja pobierająca dane z endpointu
+        async function fetchBlockchain() {
+            try {
+                const response = await fetch('/allBlocks');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const blockchain = await response.json();
+                renderBlockchain(blockchain);
+            } catch (error) {
+                console.error('Failed to fetch blockchain data:', error);
+                document.getElementById('blockchain').innerText = 'Failed to load blockchain data.';
+            }
+        }
+
+        // Funkcja renderująca blockchain na stronie
+        function renderBlockchain(blockchain) {
+            const container = document.getElementById('blockchain');
+            container.innerHTML = '';
+
+            // Grupowanie bloków według indeksu
+            const groupedBlocks = blockchain.reduce((acc, block) => {
+                const index = block.data.index;
+                if (!acc[index]) {
+                    acc[index] = [];
+                }
+                acc[index].push(block);
+                return acc;
+            }, {});
+
+            // Pobieranie indeksów i sortowanie rosnąco
+            const sortedIndices = Object.keys(groupedBlocks)
+                .map(Number)
+                .sort((a, b) => a - b);
+
+            // Rysowanie bloków
+            sortedIndices.forEach(index => {
+                const row = document.createElement('div');
+                row.className = 'row';
+
+                groupedBlocks[index].forEach(block => {
+                    const blockDiv = document.createElement('div');
+                    blockDiv.className = 'block';
+
+                    blockDiv.innerHTML = `
+                        <h3>Block #${block.data.index}</h3>
+                        <p><strong>Hash:</strong> ${block.hash}</p>
+                        <p><strong>Previous Hash:</strong> ${block.data.previous_hash}</p>
+                        <p><strong>Timestamp:</strong> ${block.data.timestamp}</p>
+                        <p><strong>Difficulty:</strong> ${block.data.difficulty}</p>
+                        <p><strong>Nonce:</strong> ${block.data.nonce}</p>
+                        <p><strong>Mined by:</strong> ${block.data.transactions[0].data.txOuts[0].address}</p>
+                    `;
+
+                    row.appendChild(blockDiv);
+                });
+
+                container.appendChild(row);
+            });
+        }
+
+        // Ładowanie blockchaina po załadowaniu strony
+        window.onload = fetchBlockchain;
+    </script>
+</body>
+</html>

@@ -13,7 +13,7 @@ services:
   node2:
     build: .
     container_name: node2
-    command: [ "./wait-for-it.sh", "node1:2000", "--", "python", "app.py", "--nodename", "node2", "--mode", "JOIN", "--address", "node2", "--port", "2000", "--peer", "./resources/peers_node_2.txt" ]
+    command: [ "./wait-for-it.sh", "-t", "30", "node1:2000", "--", "python", "app.py", "--nodename", "node2", "--mode", "JOIN", "--address", "node2", "--port", "2000", "--peer", "./resources/peers_node_2.txt" ]
     ports:
       - "2001:2000"
       - "8081:8080"
@@ -25,7 +25,7 @@ services:
   node3:
     build: .
     container_name: node3
-    command: [ "./wait-for-it.sh", "node1:2000", "--", "python", "app.py","--nodename", "node3", "--mode", "JOIN", "--address", "node3", "--port", "2000", "--peer", "./resources/peers_node_3.txt" ]
+    command: [ "./wait-for-it.sh", "-t", "30", "node1:2000", "--", "python", "app.py","--nodename", "node3", "--mode", "JOIN", "--address", "node3", "--port", "2000", "--peer", "./resources/peers_node_3.txt" ]
     ports:
       - "2002:2000"
       - "8082:8080"
@@ -37,10 +37,34 @@ services:
   node4:
     build: .
     container_name: node4
-    command: [ "./wait-for-it.sh", "node3:2000", "--", "python", "app.py","--nodename", "node4", "--mode", "JOIN", "--address", "node4", "--port", "2000", "--peer", "./resources/peers_node_4.txt" ]
+    command: [ "./wait-for-it.sh", "-t", "30", "node3:2000", "--", "python", "app.py","--nodename", "node4", "--mode", "JOIN", "--address", "node4", "--port", "2000", "--peer", "./resources/peers_node_4.txt" ]
     ports:
       - "2003:2000"
       - "8083:8080"
+    depends_on:
+      - node1
+    networks:
+      - kayaknet
+
+  node5:
+    build: .
+    container_name: node5
+    command: [ "./wait-for-it.sh", "-t", "30", "node1:2000", "--", "python", "app.py","--nodename", "node5", "--mode", "JOIN", "--address", "node5", "--port", "2000", "--peer", "./resources/peers_node_5.txt" ]
+    ports:
+      - "2004:2000"
+      - "8084:8080"
+    depends_on:
+      - node1
+    networks:
+      - kayaknet
+
+  node6:
+    build: .
+    container_name: node6
+    command: [ "./wait-for-it.sh", "-t", "30", "node2:2000", "--", "python", "app.py","--nodename", "node6", "--mode", "JOIN", "--address", "node6", "--port", "2000", "--peer", "./resources/peers_node_6.txt" ]
+    ports:
+      - "2005:2000"
+      - "8085:8080"
     depends_on:
       - node1
     networks:

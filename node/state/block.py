@@ -13,7 +13,7 @@ class BlockMetadata:
 class Block(BaseModel):
     hash: str
     data: BlockData
-    _metadata: BlockMetadata = PrivateAttr()
+    _metadata: BlockMetadata = PrivateAttr(default_factory=BlockMetadata)
 
     def get_metadata(self) -> BlockMetadata:
         return self._metadata

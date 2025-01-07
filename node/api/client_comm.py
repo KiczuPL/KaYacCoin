@@ -7,9 +7,11 @@ from flask_app import flask_app
 from state.node_state import nodeState
 from state.transaction import Transaction
 
+
 @flask_app.route('/', methods=['GET'])
 def show_chain():
     return render_template('index.html')
+
 
 @flask_app.route('/isAlive', methods=['GET'])
 def is_alive():
@@ -37,14 +39,8 @@ def get_mempool():
 @flask_app.route('/getBalance', methods=['GET'])
 def get_balance():
     params = request.args
-    utxos = []
-    for key, value in nodeState.unspent_transaction_outputs.items():
-        if value.address == params["address"]:
-            utxos.append({
-                "txOutId": key.split(":")[0],
-                "txOutIndex": key.split(":")[1],
-                "amount": value.amount
-            })
+
+    utxos = nodeState.get_address_utxos(params["address"])
 
     return jsonify({
         "balance": sum([utxo["amount"] for utxo in utxos]),

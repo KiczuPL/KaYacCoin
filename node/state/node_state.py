@@ -22,21 +22,27 @@ class NodeState:
         self.node_port = None
         self.mempool: List[Transaction] = []
         self.mempool_tx_ins = {}
-        self.unspent_transaction_outputs = {}
         self.starting_difficulty = 1
         self.coinbase_amount = 1000
-        self.verify_ssl_cert = False
         self.is_mining = True
         self.is_mining_container = {"value": True}
-        self.difficulty_update_interval = 150
-        self.target_block_time_seconds = 10
+        self.difficulty_update_interval = 100
+        self.target_block_time_seconds = 30
+
+    def get_address_utxos(self, address: str):
+        utxos = [{"txOutId": key.split(":")[0],
+                  "txOutIndex": key.split(":")[1],
+                  "amount": value.amount} for key, value in
+                 self.get_next_mining_base_block().get_metadata().unspent_transaction_outputs.items()]
+
+        return utxos
 
     def get_next_mining_base_block(self) -> Block:
-        max_index = max([block.data.index for block in self.blockchain_leaf_blocks.values()])
-        mx_blocks = [block for block in self.blockchain_leaf_blocks.values() if block.data.index == max_index]
-        return random.choice(mx_blocks)
+        # max_index = max([block.data.index for block in self.blockchain_leaf_blocks.values()])
+        # mx_blocks = [block for block in self.blockchain_leaf_blocks.values() if block.data.index == max_index]
+        # return random.choice(mx_blocks)
 
-        # return sorted(self.blockchain_leaf_blocks.values(), key=lambda x: (-x.data.index))[0]
+        return sorted(self.blockchain_leaf_blocks.values(), key=lambda x: (-x.data.index))[0]
 
     def get_dumped_blockchain(self):
         chain = [self.blockchain_blocks[key].model_dump() for key in list(self.blockchain_blocks.keys())]
@@ -92,7 +98,7 @@ class NodeState:
         return coinbase
 
     def add_transaction_to_mempool(self, transaction: Transaction):
-        if not validate_transaction(transaction, self.unspent_transaction_outputs):
+        if not validate_transaction(transaction, self.get_next_mining_base_block().get_metadata().unspent_transaction_outputs):
             logging.info("Transaction is invalid")
             raise ValueError("Transaction is invalid")
 
@@ -137,7 +143,8 @@ class NodeState:
                 raise ValueError("Block is not genesis block")
             self.blockchain_blocks[block.hash] = block
             self.blockchain_leaf_blocks[block.hash] = block
-            block.get_metadata().unspent_transaction_outputs = block.get_metadata().unspent_transaction_outputs + block.data.transactions[0].data.txOuts
+            utxos = {f"{block.data.transactions[0].txId}:0": block.data.transactions[0].data.txOuts[0]}
+            block.get_metadata().unspent_transaction_outputs = block.get_metadata().unspent_transaction_outputs | utxos
             return
 
         if block.hash in self.blockchain_blocks:

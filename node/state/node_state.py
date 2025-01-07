@@ -5,7 +5,6 @@ from typing import List, Dict
 
 from state.block import Block
 from state.transaction import Transaction, create_coinbase
-from state.transaction_data import TxOut
 from utils.mining import mine_block
 from validation.validation import validate_block, validate_transaction
 
@@ -18,7 +17,6 @@ class NodeState:
         self.connected_peers = []
         self.blockchain_blocks: Dict[str, Block] = {}
         self.blockchain_leaf_blocks: Dict[str, Block] = {}
-        # self.orphan_blocks_by_prev_hash: Dict[str, Block] = {} todo: implement later
         self.public_key_hex_str: str | None = None
         self.node_address = None
         self.node_port = None
@@ -41,7 +39,7 @@ class NodeState:
         # return sorted(self.blockchain_leaf_blocks.values(), key=lambda x: (-x.data.index))[0]
 
     def get_dumped_blockchain(self):
-        chain = [block.model_dump() for block in self.blockchain_blocks.values()]
+        chain = [self.blockchain_blocks[key].model_dump() for key in list(self.blockchain_blocks.keys())]
         return sorted(chain, key=lambda x: (x["data"]["index"], x["data"]["timestamp"]))
 
     def get_block_nth_ancestor(self, block: Block, n: int):
@@ -87,12 +85,6 @@ class NodeState:
 
     def get_public_key_hex_str(self):
         return self.public_key_hex_str
-
-    def get_unspent_transaction_output(self, txOutId: str, txOutIndex: int):
-        return self.unspent_transaction_outputs.get(f"{txOutId}:{txOutIndex}")
-
-    def add_unspent_transaction_output(self, txOutId: str, txOutIndex: int, txOut: TxOut):
-        self.unspent_transaction_outputs[f"{txOutId}:{txOutIndex}"] = txOut
 
     def create_coinbase_transaction_for_block(self, block: Block):
         coinbase = create_coinbase(self.get_public_key_hex_str(), block.data.index,
@@ -167,7 +159,6 @@ class NodeState:
         if block.data.previous_hash in self.blockchain_leaf_blocks:
             del self.blockchain_leaf_blocks[block.data.previous_hash]
         self.defrag_mempool(block)
-        self.update_utxos(block)
         logging.debug(f"Block added to blockchain: {block}")
         # self.allow_mining()
 
@@ -206,18 +197,6 @@ class NodeState:
                 logging.info(f"Adding UTXO: {transaction.txId}:{i}")
                 utxos[f"{transaction.txId}:{i}"] = txOut
         return utxos
-
-    def update_utxos(self, block):
-        for transaction in block.data.transactions:
-            for txIn in transaction.data.txIns:
-                if txIn.txOutId == "0" and txIn.txOutIndex == block.data.index:
-                    continue
-
-                logging.info(f"Removing UTXO: {txIn.txOutId}:{txIn.txOutIndex}")
-                del self.unspent_transaction_outputs[f"{txIn.txOutId}:{txIn.txOutIndex}"]
-            for i, txOut in enumerate(transaction.data.txOuts):
-                logging.info(f"Adding UTXO: {transaction.txId}:{i}")
-                self.unspent_transaction_outputs[f"{transaction.txId}:{i}"] = txOut
 
 
 nodeState = NodeState()

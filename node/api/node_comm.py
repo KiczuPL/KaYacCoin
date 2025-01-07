@@ -32,7 +32,7 @@ def broadcast_transaction():
 def broadcast_block():
     t = request.get_json()
     block: Block = Block(**t["block"])
-    logging.info(f"Received broadcast block {block.data.index}")
+    logging.info(f"Received broadcast block {block.data.index} from {t['callback']}")
     try:
         nodeState.append_block(block)
     except ValueError as e:

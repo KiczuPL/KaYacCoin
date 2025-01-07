@@ -2,7 +2,7 @@ import json
 
 import requests
 
-ports = [2000, 2001, 2002, 2003]
+ports = [2000, 2001, 2002, 2003, 2004, 2005]
 
 chains = []
 
@@ -21,4 +21,4 @@ print(c[1])
 print(c[2])
 print(c[3])
 
-print(f"Is fork free: {json.dumps(c[0]) == json.dumps(c[1]) == json.dumps(c[2]) == json.dumps(c[3])}")
+print(f"Is fork free: {json.dumps(c[0]) == json.dumps(c[1]) == json.dumps(c[2]) == json.dumps(c[3]) == json.dumps(c[4]) == json.dumps(c[5])}")

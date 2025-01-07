@@ -19,5 +19,5 @@ def mine_block(block: Block, abort_flag_container:dict) -> Block | None:
         if not abort_flag_container["value"]:
             logging.info("Mining aborted")
             return None
-    logging.info(f"Block mined: {block.hash}, nonce: {block.data.nonce}")
+    logging.info(f"Block {block.index} mined: {block.hash}, nonce: {block.data.nonce}")
     return block

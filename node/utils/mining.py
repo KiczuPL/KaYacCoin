@@ -11,13 +11,13 @@ def build_block(index: int, previous_hash: str, timestamp, difficulty: int, nonc
                                 transactions=transactions))
 
 
-def mine_block(block: Block, abort_flag_container:dict) -> Block | None:
+def mine_block(block: Block, miner_config_container: dict) -> Block | None:
     block.hash = block.calculate_hash()
     while not bin(int(block.hash, 16))[2:].zfill(256).startswith("0" * block.data.difficulty):
         block.data.nonce += 1
         block.hash = block.calculate_hash()
-        if not abort_flag_container["value"]:
+        if not miner_config_container["value"]:
             logging.info("Mining aborted")
             return None
-    logging.info(f"Block {block.index} mined: {block.hash}, nonce: {block.data.nonce}")
+    logging.info(f"Block {block.data.index} mined: {block.hash}, nonce: {block.data.nonce}")
     return block

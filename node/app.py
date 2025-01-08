@@ -25,6 +25,7 @@ def init_state(args: Namespace):
     nodeState.node_address = args.address
     nodeState.node_port = args.port
     nodeState.start_peers = [args.peer] if args.peer else []
+    nodeState.evil_mode = args.evil == "yes"
 
 
 def start_scheduler():
@@ -56,6 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('--address', type=str, required=False, help='Address', default="127.0.0.1")
     parser.add_argument('--port', type=int, required=False, help='Port number', default=2000)
     parser.add_argument('--peer', type=str, required=False, help='Peer address')
+    parser.add_argument('--evil', type=str, required=False, help='Evil mode', default='no')
 
     args = parser.parse_args()
     init_state(args)

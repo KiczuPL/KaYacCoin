@@ -1,6 +1,5 @@
 import logging
 from math import log2
-import random
 from typing import List, Dict
 
 from state.block import Block
@@ -22,27 +21,41 @@ class NodeState:
         self.node_port = None
         self.mempool: List[Transaction] = []
         self.mempool_tx_ins = {}
+        self.block_abandance_height_diff = 10
         self.starting_difficulty = 1
         self.coinbase_amount = 1000
         self.is_mining = True
         self.is_mining_container = {"value": True}
-        self.difficulty_update_interval = 100
-        self.target_block_time_seconds = 30
+        self.difficulty_update_interval = 20
+        self.target_block_time_seconds = 10
+        self.evil_mode = False
+        self.evil_mining_last_block = None
 
     def get_address_utxos(self, address: str):
-        utxos = [{"txOutId": key.split(":")[0],
-                  "txOutIndex": key.split(":")[1],
-                  "amount": value.amount} for key, value in
-                 self.get_next_mining_base_block().get_metadata().unspent_transaction_outputs.items()]
+        utxos = []
+        for key, value in self.get_next_mining_base_block().get_metadata().unspent_transaction_outputs.items():
+            if value.address == address:
+                utxos.append({"txOutId": key.split(":")[0],
+                              "txOutIndex": key.split(":")[1],
+                              "amount": value.address})
 
         return utxos
 
-    def get_next_mining_base_block(self) -> Block:
-        # max_index = max([block.data.index for block in self.blockchain_leaf_blocks.values()])
-        # mx_blocks = [block for block in self.blockchain_leaf_blocks.values() if block.data.index == max_index]
-        # return random.choice(mx_blocks)
+    def process_stale_blocks(self):
+        next_mining_base_block = self.get_next_mining_base_block()
+        for block_hash in list(self.blockchain_leaf_blocks.keys()):
+            stale_block = self.blockchain_leaf_blocks[block_hash]
+            if stale_block.data.index < next_mining_base_block.data.index - self.block_abandance_height_diff:
+                logging.info(f"Processing stale block: {stale_block}")
+                self.blockchain_leaf_blocks.pop(block_hash)
 
-        return sorted(self.blockchain_leaf_blocks.values(), key=lambda x: (-x.data.index))[0]
+    def get_next_mining_base_block(self) -> Block:
+        next_proper_block = sorted(self.blockchain_leaf_blocks.values(), key=lambda x: (-x.data.index))[0]
+
+        if self.evil_mode and self.evil_mining_last_block is not None and self.evil_mining_last_block.data.index > next_proper_block.data.index - self.block_abandance_height_diff:
+            return self.evil_mining_last_block
+
+        return next_proper_block
 
     def get_dumped_blockchain(self):
         chain = [self.blockchain_blocks[key].model_dump() for key in list(self.blockchain_blocks.keys())]
@@ -98,7 +111,8 @@ class NodeState:
         return coinbase
 
     def add_transaction_to_mempool(self, transaction: Transaction):
-        if not validate_transaction(transaction, self.get_next_mining_base_block().get_metadata().unspent_transaction_outputs):
+        if not validate_transaction(transaction,
+                                    self.get_next_mining_base_block().get_metadata().unspent_transaction_outputs):
             logging.info("Transaction is invalid")
             raise ValueError("Transaction is invalid")
 
@@ -168,6 +182,15 @@ class NodeState:
         self.defrag_mempool(block)
         logging.debug(f"Block added to blockchain: {block}")
         # self.allow_mining()
+        if self.evil_mode:
+            if self.evil_mining_last_block is None:
+                self.evil_mining_last_block = block
+            elif block.data.index > self.evil_mining_last_block.data.index and \
+                    block.data.transactions[0].data.txOuts[0].address == self.public_key_hex_str:
+                self.evil_mining_last_block = block
+            elif block.data.previous_hash == self.evil_mining_last_block.hash and \
+                    block.data.transactions[0].data.txOuts[0].address == self.public_key_hex_str:
+                self.evil_mining_last_block = block
 
     def defrag_mempool(self, block: Block):
         logging.debug("Defragging mempool")
@@ -183,7 +206,7 @@ class NodeState:
 
         genesis = mine_block(
             Block.genesis_block(first_coinbase, difficulty=self.starting_difficulty),
-            abort_flag_container=self.is_mining_container)
+            miner_config_container=self.is_mining_container)
         self.append_block(genesis)
 
     def load_blockchain(self, blockchain: dict):

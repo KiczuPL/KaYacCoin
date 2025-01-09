@@ -50,7 +50,7 @@
 
         .transactions {
             margin-top: 10px;
-            display: none; /* Domyślnie ukrywamy */
+            display: none;
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
@@ -69,14 +69,29 @@
         .toggle-button:hover {
             background-color: #0056b3;
         }
+
+        #expand-all {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        #expand-all:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
 <h1>Blockchain Viewer</h1>
+<button id="expand-all">Expand All Transactions</button>
 <div id="blockchain" class="blockchain"></div>
 
 <script>
-    // Funkcja pobierająca dane z endpointu
     async function fetchBlockchain() {
         try {
             const response = await fetch('/allBlocks');
@@ -91,12 +106,10 @@
         }
     }
 
-    // Funkcja renderująca blockchain na stronie
     function renderBlockchain(blockchain) {
         const container = document.getElementById('blockchain');
         container.innerHTML = '';
 
-        // Grupowanie bloków według indeksu
         const groupedBlocks = blockchain.reduce((acc, block) => {
             const index = block.data.index;
             if (!acc[index]) {
@@ -106,12 +119,10 @@
             return acc;
         }, {});
 
-        // Pobieranie indeksów i sortowanie rosnąco
         const sortedIndices = Object.keys(groupedBlocks)
             .map(Number)
             .sort((a, b) => a - b);
 
-        // Rysowanie bloków
         sortedIndices.forEach(index => {
             const row = document.createElement('div');
             row.className = 'row';
@@ -120,7 +131,6 @@
                 const blockDiv = document.createElement('div');
                 blockDiv.className = 'block';
 
-                // Dodanie szczegółów bloku
                 blockDiv.innerHTML = `
                         <h3>Block #${block.data.index}</h3>
                         <p><strong>Hash:</strong> ${block.hash}</p>
@@ -146,7 +156,6 @@
                         </div>
                     `;
 
-                // Obsługa przycisku collapse
                 const toggleButton = blockDiv.querySelector('.toggle-button');
                 const transactionsDiv = blockDiv.querySelector('.transactions');
                 toggleButton.addEventListener('click', () => {
@@ -162,7 +171,20 @@
         });
     }
 
-    // Ładowanie blockchaina po załadowaniu strony
+    // Obsługa przycisku "Expand All Transactions"
+    document.getElementById('expand-all').addEventListener('click', () => {
+        const allTransactions = document.querySelectorAll('.transactions');
+        const allToggleButtons = document.querySelectorAll('.toggle-button');
+
+        allTransactions.forEach(transactionsDiv => {
+            transactionsDiv.style.display = 'block';
+        });
+
+        allToggleButtons.forEach(button => {
+            button.textContent = 'Hide Transactions';
+        });
+    });
+
     window.onload = fetchBlockchain;
 </script>
 </body>

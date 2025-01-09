@@ -33,6 +33,7 @@
             background-color: #f3f3f3;
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
             min-width: 200px;
+            position: relative;
         }
 
         .block h3 {
@@ -46,58 +47,81 @@
             font-size: 14px;
             word-break: break-word;
         }
+
+        .transactions {
+            margin-top: 10px;
+            display: none; /* Domyślnie ukrywamy */
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+
+        .toggle-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .toggle-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
-    <h1>Blockchain Viewer</h1>
-    <div id="blockchain" class="blockchain"></div>
+<h1>Blockchain Viewer</h1>
+<div id="blockchain" class="blockchain"></div>
 
-    <script>
-        // Funkcja pobierająca dane z endpointu
-        async function fetchBlockchain() {
-            try {
-                const response = await fetch('/allBlocks');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const blockchain = await response.json();
-                renderBlockchain(blockchain);
-            } catch (error) {
-                console.error('Failed to fetch blockchain data:', error);
-                document.getElementById('blockchain').innerText = 'Failed to load blockchain data.';
+<script>
+    // Funkcja pobierająca dane z endpointu
+    async function fetchBlockchain() {
+        try {
+            const response = await fetch('/allBlocks');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
+            const blockchain = await response.json();
+            renderBlockchain(blockchain);
+        } catch (error) {
+            console.error('Failed to fetch blockchain data:', error);
+            document.getElementById('blockchain').innerText = 'Failed to load blockchain data.';
         }
+    }
 
-        // Funkcja renderująca blockchain na stronie
-        function renderBlockchain(blockchain) {
-            const container = document.getElementById('blockchain');
-            container.innerHTML = '';
+    // Funkcja renderująca blockchain na stronie
+    function renderBlockchain(blockchain) {
+        const container = document.getElementById('blockchain');
+        container.innerHTML = '';
 
-            // Grupowanie bloków według indeksu
-            const groupedBlocks = blockchain.reduce((acc, block) => {
-                const index = block.data.index;
-                if (!acc[index]) {
-                    acc[index] = [];
-                }
-                acc[index].push(block);
-                return acc;
-            }, {});
+        // Grupowanie bloków według indeksu
+        const groupedBlocks = blockchain.reduce((acc, block) => {
+            const index = block.data.index;
+            if (!acc[index]) {
+                acc[index] = [];
+            }
+            acc[index].push(block);
+            return acc;
+        }, {});
 
-            // Pobieranie indeksów i sortowanie rosnąco
-            const sortedIndices = Object.keys(groupedBlocks)
-                .map(Number)
-                .sort((a, b) => a - b);
+        // Pobieranie indeksów i sortowanie rosnąco
+        const sortedIndices = Object.keys(groupedBlocks)
+            .map(Number)
+            .sort((a, b) => a - b);
 
-            // Rysowanie bloków
-            sortedIndices.forEach(index => {
-                const row = document.createElement('div');
-                row.className = 'row';
+        // Rysowanie bloków
+        sortedIndices.forEach(index => {
+            const row = document.createElement('div');
+            row.className = 'row';
 
-                groupedBlocks[index].forEach(block => {
-                    const blockDiv = document.createElement('div');
-                    blockDiv.className = 'block';
+            groupedBlocks[index].forEach(block => {
+                const blockDiv = document.createElement('div');
+                blockDiv.className = 'block';
 
-                    blockDiv.innerHTML = `
+                // Dodanie szczegółów bloku
+                blockDiv.innerHTML = `
                         <h3>Block #${block.data.index}</h3>
                         <p><strong>Hash:</strong> ${block.hash}</p>
                         <p><strong>Previous Hash:</strong> ${block.data.previous_hash}</p>
@@ -105,17 +129,41 @@
                         <p><strong>Difficulty:</strong> ${block.data.difficulty}</p>
                         <p><strong>Nonce:</strong> ${block.data.nonce}</p>
                         <p><strong>Mined by:</strong> ${block.data.transactions[0].data.txOuts[0].address}</p>
+                        <button class="toggle-button">Show Transactions</button>
+                        <div class="transactions">
+                            ${block.data.transactions.map(tx => `
+                                <div>
+                                    <p><strong>Transaction ID:</strong> ${tx.txId}</p>
+                                    <p><strong>Inputs:</strong> ${tx.data.txIns.map(input => `
+                                        (TxOutId: ${input.txOutId}, Index: ${input.txOutIndex})
+                                    `).join(', ')}</p>
+                                    <p><strong>Outputs:</strong> ${tx.data.txOuts.map(output => `
+                                        (Address: ${output.address}, Amount: ${output.amount})
+                                    `).join(', ')}</p>
+                                </div>
+                                <hr>
+                            `).join('')}
+                        </div>
                     `;
 
-                    row.appendChild(blockDiv);
+                // Obsługa przycisku collapse
+                const toggleButton = blockDiv.querySelector('.toggle-button');
+                const transactionsDiv = blockDiv.querySelector('.transactions');
+                toggleButton.addEventListener('click', () => {
+                    const isVisible = transactionsDiv.style.display === 'block';
+                    transactionsDiv.style.display = isVisible ? 'none' : 'block';
+                    toggleButton.textContent = isVisible ? 'Show Transactions' : 'Hide Transactions';
                 });
 
-                container.appendChild(row);
+                row.appendChild(blockDiv);
             });
-        }
 
-        // Ładowanie blockchaina po załadowaniu strony
-        window.onload = fetchBlockchain;
-    </script>
+            container.appendChild(row);
+        });
+    }
+
+    // Ładowanie blockchaina po załadowaniu strony
+    window.onload = fetchBlockchain;
+</script>
 </body>
 </html>

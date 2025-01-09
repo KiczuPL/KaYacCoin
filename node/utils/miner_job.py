@@ -5,6 +5,7 @@ import random
 from client.broadcast import broadcast_block_into_network
 from state.node_state import nodeState
 from utils.mining import build_block, mine_block
+from validation.validation import validate_transaction
 
 
 def miner_scheduled_job():
@@ -13,8 +14,13 @@ def miner_scheduled_job():
         parent_block = nodeState.get_next_mining_base_block()
         available_utxos = parent_block.get_metadata().unspent_transaction_outputs
 
-        transactions_to_include = list(filter(lambda tx: all([txIn.txOutId + ":" + str(txIn.txOutIndex) in available_utxos for txIn in tx.data.txIns]), nodeState.mempool))
-
+        transactions_to_include = []
+        for transaction in nodeState.mempool:
+            if validate_transaction(transaction, available_utxos):
+                transactions_to_include.append(transaction)
+            else:
+                logging.info(f"Transaction {transaction.txId} is invalid")
+                nodeState.mempool.remove(transaction)
 
         blockchain_length_at_start = parent_block.data.index + 1
         block = build_block(index=blockchain_length_at_start, previous_hash=parent_block.hash,

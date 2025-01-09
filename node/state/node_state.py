@@ -37,7 +37,7 @@ class NodeState:
             if value.address == address:
                 utxos.append({"txOutId": key.split(":")[0],
                               "txOutIndex": key.split(":")[1],
-                              "amount": value.address})
+                              "amount": value.amount})
 
         return utxos
 
@@ -46,8 +46,31 @@ class NodeState:
         for block_hash in list(self.blockchain_leaf_blocks.keys()):
             stale_block = self.blockchain_leaf_blocks[block_hash]
             if stale_block.data.index < next_mining_base_block.data.index - self.block_abandance_height_diff:
-                logging.info(f"Processing stale block: {stale_block}")
-                self.blockchain_leaf_blocks.pop(block_hash)
+                self.process_stale_block(stale_block, next_mining_base_block)
+
+    def process_stale_block(self, stale_block: Block, next_mining_base_block: Block):
+        logging.info(f"Processing stale block#{stale_block.data.index}: {stale_block.hash}")
+        block_parallel_to_stale_block = self.get_block_nth_ancestor(next_mining_base_block,
+                                                                    next_mining_base_block.data.index - stale_block.data.index)
+        stale_branch_block = stale_block
+        main_branch_block = block_parallel_to_stale_block
+
+        stale_non_coinbase_transactions = []
+
+        while stale_branch_block.data.previous_hash != main_branch_block.data.previous_hash:
+            stale_branch_block = self.blockchain_blocks[stale_branch_block.data.previous_hash]
+            main_branch_block = self.blockchain_blocks[main_branch_block.data.previous_hash]
+            stale_non_coinbase_transactions += stale_branch_block.data.transactions[1:]
+
+        for transaction in stale_non_coinbase_transactions:
+            try:
+                self.add_transaction_to_mempool(transaction)
+            except ValueError:
+                pass
+        try:
+            self.blockchain_leaf_blocks.pop(stale_block.hash)
+        except KeyError:
+            pass
 
     def get_next_mining_base_block(self) -> Block:
         next_proper_block = sorted(self.blockchain_leaf_blocks.values(), key=lambda x: (-x.data.index))[0]
@@ -168,17 +191,19 @@ class NodeState:
             raise ValueError("Invalid block, previous hash does not match any block")
 
         parent_block = self.blockchain_blocks[block.data.previous_hash]
-        block.get_metadata().unspent_transaction_outputs = self.build_block_utxos(block, parent_block)
 
-        if not validate_block(block, self.coinbase_amount,
+        if not validate_block(block, self.coinbase_amount, parent_block.get_metadata().unspent_transaction_outputs,
                               self.get_difficulty_for_block(block), parent_block.data.index + 1):
             raise ValueError("Invalid block")
         # self.pause_mining()
         self.blockchain_blocks[block.hash] = block
         self.blockchain_leaf_blocks[block.hash] = block
         parent_block.get_metadata().children_hashes.append(block.hash)
+        block.get_metadata().unspent_transaction_outputs = self.build_block_utxos(block, parent_block)
+
         if block.data.previous_hash in self.blockchain_leaf_blocks:
             del self.blockchain_leaf_blocks[block.data.previous_hash]
+        self.process_stale_blocks()
         self.defrag_mempool(block)
         logging.debug(f"Block added to blockchain: {block}")
         # self.allow_mining()
@@ -188,9 +213,9 @@ class NodeState:
             elif block.data.index > self.evil_mining_last_block.data.index and \
                     block.data.transactions[0].data.txOuts[0].address == self.public_key_hex_str:
                 self.evil_mining_last_block = block
-            elif block.data.previous_hash == self.evil_mining_last_block.hash and \
-                    block.data.transactions[0].data.txOuts[0].address == self.public_key_hex_str:
-                self.evil_mining_last_block = block
+            # elif block.data.previous_hash == self.evil_mining_last_block.hash and \
+            #         block.data.transactions[0].data.txOuts[0].address == self.public_key_hex_str:
+            #     self.evil_mining_last_block = block
 
     def defrag_mempool(self, block: Block):
         logging.debug("Defragging mempool")

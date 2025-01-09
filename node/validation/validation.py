@@ -8,9 +8,8 @@ from state.block import Block
 from state.transaction import Transaction
 
 
-def validate_block(block: Block, expected_coinbase_amount: int,
+def validate_block(block: Block, expected_coinbase_amount: int, unspent_transaction_outputs: dict,
                    expected_block_difficulty: int, expected_index: int) -> bool:
-    unspent_transaction_outputs = block.get_metadata().unspent_transaction_outputs
     if block.data.index != expected_index:
         logging.info("Block index is invalid")
         return False

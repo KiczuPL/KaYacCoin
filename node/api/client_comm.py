@@ -23,11 +23,16 @@ def broadcast():
     logging.info(f"Received broadcast message")
     t = request.get_json()
     tr = Transaction(**t)
-    nodeState.add_transaction_to_mempool(tr)
-    broadcast_transaction_into_network({
-        "transaction": tr,
-        "callback": nodeState.get_callback_address()
-    })
+    try:
+        nodeState.add_transaction_to_mempool(tr)
+        if not nodeState.evil_mode:
+            broadcast_transaction_into_network({
+                "transaction": tr,
+                "callback": nodeState.get_callback_address()
+            })
+    except Exception as e:
+        logging.error(f"Error broadcasting transaction: {e}")
+        return "Error broadcasting transaction"
     return "Message broadcasted"
 
 

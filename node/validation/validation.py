@@ -122,6 +122,11 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
         logging.info("Transaction signature is invalid")
         return False
 
+    for txOut in transaction.data.txOuts:
+        if validate_pub_key_str(txOut.address) is False:
+            logging.info("Transaction output address is invalid")
+            return False
+
     if sum([txOut.amount for txOut in transaction.data.txOuts]) != sum(
             [unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}").amount for txIn in
              transaction.data.txIns]):

@@ -21,12 +21,12 @@ class NodeState:
         self.node_port = None
         self.mempool: List[Transaction] = []
         self.mempool_tx_ins = {}
-        self.block_abandance_height_diff = 10
-        self.starting_difficulty = 1
+        self.block_abandance_height_diff = 5
+        self.starting_difficulty = 10
         self.coinbase_amount = 1000
         self.is_mining = True
         self.is_mining_container = {"value": True}
-        self.difficulty_update_interval = 20
+        self.difficulty_update_interval = 50
         self.target_block_time_seconds = 10
         self.evil_mode = False
         self.evil_mining_last_block = None
@@ -44,9 +44,12 @@ class NodeState:
     def process_stale_blocks(self):
         next_mining_base_block = self.get_next_mining_base_block()
         for block_hash in list(self.blockchain_leaf_blocks.keys()):
-            stale_block = self.blockchain_leaf_blocks[block_hash]
-            if stale_block.data.index < next_mining_base_block.data.index - self.block_abandance_height_diff:
-                self.process_stale_block(stale_block, next_mining_base_block)
+            try:
+                stale_block = self.blockchain_leaf_blocks[block_hash]
+                if stale_block.data.index < next_mining_base_block.data.index - self.block_abandance_height_diff:
+                    self.process_stale_block(stale_block, next_mining_base_block)
+            except KeyError:
+                pass
 
     def process_stale_block(self, stale_block: Block, next_mining_base_block: Block):
         logging.info(f"Processing stale block#{stale_block.data.index}: {stale_block.hash}")
@@ -64,8 +67,10 @@ class NodeState:
 
         for transaction in stale_non_coinbase_transactions:
             try:
+                logging.info(f"Adding stale transaction {transaction.txId} back to mempool: {transaction}")
                 self.add_transaction_to_mempool(transaction)
             except ValueError:
+                logging.info(f"Transaction {transaction.txId} could not be added back to mempool")
                 pass
         try:
             self.blockchain_leaf_blocks.pop(stale_block.hash)
@@ -111,6 +116,10 @@ class NodeState:
             return new_difficulty
 
         return parent_block.data.difficulty
+
+    def restart_mining(self):
+        self.is_mining_container["value"] = False
+        logging.info("Mining will be restarted")
 
     def pause_mining(self):
         self.is_mining = False
@@ -195,11 +204,13 @@ class NodeState:
         if not validate_block(block, self.coinbase_amount, parent_block.get_metadata().unspent_transaction_outputs,
                               self.get_difficulty_for_block(block), parent_block.data.index + 1):
             raise ValueError("Invalid block")
-        # self.pause_mining()
         self.blockchain_blocks[block.hash] = block
         self.blockchain_leaf_blocks[block.hash] = block
         parent_block.get_metadata().children_hashes.append(block.hash)
         block.get_metadata().unspent_transaction_outputs = self.build_block_utxos(block, parent_block)
+
+        if block.data.index > self.get_next_mining_base_block().data.index:
+            self.restart_mining()
 
         if block.data.previous_hash in self.blockchain_leaf_blocks:
             del self.blockchain_leaf_blocks[block.data.previous_hash]

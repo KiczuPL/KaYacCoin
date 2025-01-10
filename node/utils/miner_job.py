@@ -17,6 +17,7 @@ def miner_scheduled_job():
         transactions_to_include = []
         for transaction in nodeState.mempool:
             if validate_transaction(transaction, available_utxos):
+                logging.info(f"Transaction {transaction.txId} will be mined")
                 transactions_to_include.append(transaction)
             else:
                 logging.info(f"Transaction {transaction.txId} is invalid")

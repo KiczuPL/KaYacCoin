@@ -1,11 +1,11 @@
 import argparse
+import logging
 from argparse import Namespace
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from cryptography.hazmat.primitives import serialization
 
 from client.broadcast import init_handshake, get_blockchain
-from key_generator import get_key
+from key_generator import get_pub_key_hex_str
 
 from api.client_comm import *
 from api.node_comm import *
@@ -16,15 +16,16 @@ from utils.miner_job import miner_scheduled_job
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+logger = logging.getLogger('apscheduler')
+logger.setLevel(logging.ERROR)
 
 def init_state(args: Namespace):
-    nodeState.private_key = get_key(args.nodename)
+    nodeState.public_key_hex_str = get_pub_key_hex_str(args.nodename)
     nodeState.mode = args.mode
     nodeState.node_address = args.address
     nodeState.node_port = args.port
     nodeState.start_peers = [args.peer] if args.peer else []
-    nodeState.node_id = nodeState.private_key.public_key().public_bytes(encoding=serialization.Encoding.DER,
-                                                                        format=serialization.PublicFormat.SubjectPublicKeyInfo).hex()
+    nodeState.evil_mode = args.evil == "yes"
 
 
 def start_scheduler():
@@ -32,7 +33,7 @@ def start_scheduler():
     scheduler.add_job(
         miner_scheduled_job,
         'interval',
-        seconds=10,
+        seconds=1,
         max_instances=1,
         id='data_task'
     )
@@ -56,6 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('--address', type=str, required=False, help='Address', default="127.0.0.1")
     parser.add_argument('--port', type=int, required=False, help='Port number', default=2000)
     parser.add_argument('--peer', type=str, required=False, help='Peer address')
+    parser.add_argument('--evil', type=str, required=False, help='Evil mode', default='no')
 
     args = parser.parse_args()
     init_state(args)
@@ -76,4 +78,4 @@ if __name__ == "__main__":
     logging.info("Starting miner")
     start_scheduler()
 
-    flask_app.run(host=args.address, port=args.port, ssl_context='adhoc', use_reloader=False)
+    flask_app.run(host=args.address, port=args.port, use_reloader=False)

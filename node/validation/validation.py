@@ -1,16 +1,19 @@
 import logging
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 
 from state.block import Block
 from state.transaction import Transaction
 
 
-def validate_block(block: Block, unspent_transaction_outputs: dict, expected_coinbase_amount: int,
-                   expected_block_difficulty: int) -> bool:
+def validate_block(block: Block, expected_coinbase_amount: int, unspent_transaction_outputs: dict,
+                   expected_block_difficulty: int, expected_index: int) -> bool:
+    if block.data.index != expected_index:
+        logging.info("Block index is invalid")
+        return False
+
     if not block.is_hash_valid():
         logging.info("Block hash is invalid")
         return False
@@ -60,12 +63,12 @@ def validate_coinbase_transaction(transaction: Transaction, expected_coinbase_am
         logging.info("Coinbase transaction output amount is invalid")
         return False
 
-    try:
-        pub_key = serialization.load_der_public_key(bytes.fromhex(transaction.data.txOuts[0].address),
-                                                    backend=EllipticCurvePublicKey)
-        pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
-    except InvalidSignature:
-        logging.info("Transaction signature is invalid. ")
+    if validate_pub_key_str(transaction.data.txOuts[0].address) is False:
+        logging.info("Coinbase transaction output address is invalid")
+        return False
+
+    if transaction.signature != "":
+        logging.info("Coinbase should have an empty signature")
         return False
 
     return True
@@ -91,11 +94,16 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
         return False
 
     unique_input_address = set()
+    transaction_inputs_txids = []
     for txIn in transaction.data.txIns:
         uTxO = unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}")
         if uTxO is None:
-            logging.info("Transaction input is not unspent or does not exist")
+            logging.info("Transaction input is already spent or does not exist")
             return False
+        if txIn.txOutId in transaction_inputs_txids:
+            logging.info(f"Utxo {txIn.txOutId} is already used in this transaction")
+            return False
+        transaction_inputs_txids.append(txIn.txOutId)
         unique_input_address.add(uTxO.address)
 
     if len(unique_input_address) != 1:
@@ -103,13 +111,21 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
         return False
     sender_address = list(unique_input_address)[0]
 
+    if validate_pub_key_str(sender_address) is False:
+        logging.info("Transaction input address is invalid")
+        return False
+
     try:
-        pub_key = serialization.load_der_public_key(bytes.fromhex(sender_address),
-                                                    backend=EllipticCurvePublicKey)
+        pub_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), bytes.fromhex(sender_address))
         pub_key.verify(bytes.fromhex(transaction.signature), data_hash.encode(), ec.ECDSA(hashes.SHA256()))
     except InvalidSignature:
         logging.info("Transaction signature is invalid")
         return False
+
+    for txOut in transaction.data.txOuts:
+        if validate_pub_key_str(txOut.address) is False:
+            logging.info("Transaction output address is invalid")
+            return False
 
     if sum([txOut.amount for txOut in transaction.data.txOuts]) != sum(
             [unspent_transaction_outputs.get(f"{txIn.txOutId}:{txIn.txOutIndex}").amount for txIn in
@@ -118,3 +134,12 @@ def validate_transaction(transaction: Transaction, unspent_transaction_outputs: 
         return False
 
     return True
+
+def validate_pub_key_str(public_key_str: str) -> bool:
+    try:
+        if len(public_key_str) != 66 or public_key_str[:2] not in ["02", "03"]:
+            return False
+        ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), bytes.fromhex(public_key_str))
+        return True
+    except ValueError:
+        return False

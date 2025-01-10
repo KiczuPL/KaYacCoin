@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .blockchain {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .row {
+            display: flex;
+            margin: 10px 0;
+        }
+
+        .block {
+            border: 2px solid #333;
+            padding: 10px;
+            margin: 5px;
+            background-color: #f3f3f3;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+            position: relative;
+        }
+
+        .block h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .block p {
+            margin: 5px 0;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+        .transactions {
+            margin-top: 10px;
+            display: none;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+
+        .toggle-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .toggle-button:hover {
+            background-color: #0056b3;
+        }
+
+        #expand-all {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        #expand-all:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+<h1>Blockchain Viewer</h1>
+<button id="expand-all">Expand All Transactions</button>
+<div id="blockchain" class="blockchain"></div>
+
+<script>
+    async function fetchBlockchain() {
+        try {
+            const response = await fetch('/allBlocks');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const blockchain = await response.json();
+            renderBlockchain(blockchain);
+        } catch (error) {
+            console.error('Failed to fetch blockchain data:', error);
+            document.getElementById('blockchain').innerText = 'Failed to load blockchain data.';
+        }
+    }
+
+    function renderBlockchain(blockchain) {
+        const container = document.getElementById('blockchain');
+        container.innerHTML = '';
+
+        const groupedBlocks = blockchain.reduce((acc, block) => {
+            const index = block.data.index;
+            if (!acc[index]) {
+                acc[index] = [];
+            }
+            acc[index].push(block);
+            return acc;
+        }, {});
+
+        const sortedIndices = Object.keys(groupedBlocks)
+            .map(Number)
+            .sort((a, b) => a - b);
+
+        sortedIndices.forEach(index => {
+            const row = document.createElement('div');
+            row.className = 'row';
+
+            groupedBlocks[index].forEach(block => {
+                const blockDiv = document.createElement('div');
+                blockDiv.className = 'block';
+
+                blockDiv.innerHTML = `
+                        <h3>Block #${block.data.index}</h3>
+                        <p><strong>Hash:</strong> ${block.hash}</p>
+                        <p><strong>Previous Hash:</strong> ${block.data.previous_hash}</p>
+                        <p><strong>Timestamp:</strong> ${block.data.timestamp}</p>
+                        <p><strong>Difficulty:</strong> ${block.data.difficulty}</p>
+                        <p><strong>Nonce:</strong> ${block.data.nonce}</p>
+                        <p><strong>Mined by:</strong> ${block.data.transactions[0].data.txOuts[0].address}</p>
+                        <button class="toggle-button">Show Transactions</button>
+                        <div class="transactions">
+                            ${block.data.transactions.map(tx => `
+                                <div>
+                                    <p><strong>Transaction ID:</strong> ${tx.txId}</p>
+                                    <p><strong>Inputs:</strong> ${tx.data.txIns.map(input => `
+                                        (TxOutId: ${input.txOutId}, Index: ${input.txOutIndex})
+                                    `).join(', ')}</p>
+                                    <p><strong>Outputs:</strong> ${tx.data.txOuts.map(output => `
+                                        (Address: ${output.address}, Amount: ${output.amount})
+                                    `).join(', ')}</p>
+                                </div>
+                                <hr>
+                            `).join('')}
+                        </div>
+                    `;
+
+                const toggleButton = blockDiv.querySelector('.toggle-button');
+                const transactionsDiv = blockDiv.querySelector('.transactions');
+                toggleButton.addEventListener('click', () => {
+                    const isVisible = transactionsDiv.style.display === 'block';
+                    transactionsDiv.style.display = isVisible ? 'none' : 'block';
+                    toggleButton.textContent = isVisible ? 'Show Transactions' : 'Hide Transactions';
+                });
+
+                row.appendChild(blockDiv);
+            });
+
+            container.appendChild(row);
+        });
+    }
+
+    // Obsługa przycisku "Expand All Transactions"
+    document.getElementById('expand-all').addEventListener('click', () => {
+        const allTransactions = document.querySelectorAll('.transactions');
+        const allToggleButtons = document.querySelectorAll('.toggle-button');
+
+        allTransactions.forEach(transactionsDiv => {
+            transactionsDiv.style.display = 'block';
+        });
+
+        allToggleButtons.forEach(button => {
+            button.textContent = 'Hide Transactions';
+        });
+    });
+
+    window.onload = fetchBlockchain;
+</script>
+</body>
+</html>

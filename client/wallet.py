@@ -89,8 +89,8 @@ def generate_key(identity_name: str, passphrase: str):
 
     # Konwersja klucza publicznego na format hex (dla pliku tekstowego)
     public_key_hex = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.DER,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        encoding=serialization.Encoding.X962,
+        format=serialization.PublicFormat.CompressedPoint
     ).hex()
 
     salt = os.urandom(16)

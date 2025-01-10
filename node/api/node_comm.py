@@ -9,15 +9,9 @@ from state.node_state import nodeState
 from state.transaction import Transaction
 
 
-@flask_app.route('/block', methods=['GET'])
-def get_block():
-    params = request.args
-    return jsonify(nodeState.blockchain[int(params["index"])].model_dump())
-
-
 @flask_app.route('/allBlocks', methods=['GET'])
 def get_all_blocks():
-    return jsonify([block.model_dump() for block in nodeState.blockchain])
+    return jsonify(nodeState.get_dumped_blockchain())
 
 
 @flask_app.route('/broadcastTransaction', methods=['POST'])
@@ -38,7 +32,7 @@ def broadcast_transaction():
 def broadcast_block():
     t = request.get_json()
     block: Block = Block(**t["block"])
-    logging.info(f"Received broadcast block {block.data.index}")
+    logging.info(f"Received broadcast block {block.data.index} from {t['callback']}")
     try:
         nodeState.append_block(block)
     except ValueError as e:

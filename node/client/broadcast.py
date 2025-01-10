@@ -30,11 +30,10 @@ def broadcast_block_into_network(block: Block, callback_address, address_to_skip
 def init_handshake(peers):
     for peer in peers:
         logging.info(f"Initiating handshake with peer: {peer}")
-        logging.info(f"https://{peer}/handshake")
+        logging.info(f"http://{peer}/handshake")
         try:
-            response = requests.post(f"https://{peer}/handshake",
-                                     json={"callback": f"{nodeState.node_address}:{nodeState.node_port}"},
-                                     verify=nodeState.verify_ssl_cert)
+            response = requests.post(f"http://{peer}/handshake",
+                                     json={"callback": f"{nodeState.node_address}:{nodeState.node_port}"})
             response.raise_for_status()
         except requests.exceptions.Timeout:
             logging.warn("Request timed out")
@@ -57,8 +56,8 @@ def send_to_all_peers(request_body, address_to_skip, endpoint, content=""):
             continue
         try:
             logging.debug(f"Broadcasting message/block to peer: {peer}")
-            response = requests.post(f"https://{peer}/{endpoint}", json=request_body,
-                                     verify=nodeState.verify_ssl_cert)
+            response = requests.post(f"http://{peer}/{endpoint}", json=request_body,
+                                     )
             response.raise_for_status()
         except requests.exceptions.Timeout:
             logging.warn("Request timed out")
@@ -80,7 +79,7 @@ def send_to_all_peers(request_body, address_to_skip, endpoint, content=""):
 
 def get_block(node_address, index):
     try:
-        response = requests.get(f"https://{node_address}/block?index={index}", verify=nodeState.verify_ssl_cert)
+        response = requests.get(f"http://{node_address}/block?index={index}")
         response.raise_for_status()
         return response.json()
     except requests.exceptions.Timeout:
@@ -96,7 +95,7 @@ def get_block(node_address, index):
 
 def get_blockchain(node_address):
     try:
-        response = requests.get(f"https://{node_address}/allBlocks", verify=nodeState.verify_ssl_cert)
+        response = requests.get(f"http://{node_address}/allBlocks")
         response.raise_for_status()
         return response.json()
     except requests.exceptions.Timeout:
